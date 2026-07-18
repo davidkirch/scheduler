@@ -36,6 +36,27 @@
       "when": 1784291311111,
       "tag": "0004_lean_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784378785226,
+      "tag": "0005_magenta_argent",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784378881725,
+      "tag": "0006_brainy_mindworm",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784378922867,
+      "tag": "0007_soft_exodus",
+      "breakpoints": true
     }
   ]
 }

@@ -9,31 +9,28 @@ import { getProjectQuery, votesQuery } from "@/server/projects";
 export const Route = createFileRoute("/project/$projectSlug")({
 	ssr: false,
 	loader: async ({ params, context }) => {
-		context.queryClient.ensureQueryData(
-			getProjectQuery(Number(params.projectSlug)),
-		);
-		context.queryClient.ensureQueryData(votesQuery(Number(params.projectSlug)));
+		context.queryClient.ensureQueryData(getProjectQuery(params.projectSlug));
+		context.queryClient.ensureQueryData(votesQuery(params.projectSlug));
 	},
 	component: RouteComponent,
 });
 
 function RouteComponent() {
 	const { projectSlug } = Route.useParams();
-	const { data: project } = useSuspenseQuery(
-		getProjectQuery(Number(projectSlug)),
-	);
-	const { data: results } = useSuspenseQuery(votesQuery(Number(projectSlug)));
+	const { data: project } = useSuspenseQuery(getProjectQuery(projectSlug));
+	const { data: results } = useSuspenseQuery(votesQuery(projectSlug));
 
 	const queryClient = useQueryClient();
 	useEffect(() => {
-		const id = Number(projectSlug);
-		const es = new EventSource(`/api/votes/${id}/stream`);
+		const es = new EventSource(`/api/votes/${projectSlug}/stream`);
 		es.onmessage = () =>
-			queryClient.invalidateQueries({ queryKey: votesQuery(id).queryKey });
+			queryClient.invalidateQueries({
+				queryKey: votesQuery(projectSlug).queryKey,
+			});
 		return () => es.close(); // triggers request.signal abort → server cleanup
 	}, [projectSlug, queryClient]);
 
-	const share_link = `${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.id}/vote`;
+	const share_link = `${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.token}/vote`;
 	const [copied, setCopied] = useState(false);
 
 	return (

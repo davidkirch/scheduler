@@ -28,22 +28,24 @@ export const listProjects = createServerFn({ method: "GET" }).handler(
 );
 
 export const getProject = createServerFn({ method: "GET" })
-	.inputValidator(z.object({ id: z.number().int().positive() }))
+	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw Error("log in first");
 		const [project] = await db
 			.select()
 			.from(projects)
-			.where(and(eq(projects.ownerId, user.id), eq(projects.id, data.id)));
+			.where(
+				and(eq(projects.ownerId, user.id), eq(projects.token, data.token)),
+			);
 		if (!project) throw new Error("project not found");
 		return project;
 	});
 
-export const getProjectQuery = (id: number) =>
+export const getProjectQuery = (token: string) =>
 	queryOptions({
-		queryKey: ["project"],
-		queryFn: () => getProject({ data: { id } }),
+		queryKey: ["project", token],
+		queryFn: () => getProject({ data: { token } }),
 	});
 
 export const projectsQuery = queryOptions({
@@ -54,23 +56,23 @@ export const projectsQuery = queryOptions({
 export const deleteProject = createServerFn({
 	method: "POST",
 })
-	.inputValidator(z.object({ id: z.number().int().positive() }))
+	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
 		const [project] = await db
 			.select()
 			.from(projects)
-			.where(eq(projects.id, data.id))
+			.where(eq(projects.token, data.token))
 			.limit(1);
 		if (!project) throw new Error("project not found");
 		if (project.ownerId !== user.id)
 			throw new Error("this project doesnt belong to you");
-		return await db.delete(projects).where(eq(projects.id, data.id));
+		return await db.delete(projects).where(eq(projects.token, data.token));
 	});
 
 export const deleteProjectMutation = {
-	mutationFn: (id: number) => deleteProject({ data: { id } }),
+	mutationFn: (token: string) => deleteProject({ data: { token } }),
 };
 
 export const createProjectInput = z.object({
@@ -82,7 +84,7 @@ export const createProjectInput = z.object({
 	showResultsToGuests: z.boolean().default(false),
 });
 createProjectInput satisfies z.ZodType<
-	Omit<typeof projects.$inferInsert, "id" | "ownerId" | "createdAt">
+	Omit<typeof projects.$inferInsert, "id" | "ownerId" | "createdAt" | "token">
 >;
 
 export const createProject = createServerFn({ method: "POST" })
@@ -90,10 +92,11 @@ export const createProject = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
+		const token = crypto.randomUUID().slice(0, 32);
 		const [project] = await db
 			.insert(projects)
-			.values({ ...data, ownerId: user.id })
-			.returning({ id: projects.id });
+			.values({ ...data, ownerId: user.id, token })
+			.returning({ token: projects.token });
 		return project;
 	});
 
@@ -105,14 +108,14 @@ export const createProjectMutation = {
 export const getVotesForProject = createServerFn({
 	method: "GET",
 })
-	.inputValidator(z.object({ id: z.number().int().positive() }))
+	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
 		const [project] = await db
 			.select()
 			.from(projects)
-			.where(eq(projects.id, data.id))
+			.where(eq(projects.token, data.token))
 			.limit(1);
 		if (!project) throw new Error("project not found");
 
@@ -122,46 +125,50 @@ export const getVotesForProject = createServerFn({
 		const projectVotes = await db
 			.select()
 			.from(votes)
-			.where(eq(votes.projectId, data.id));
+			.where(eq(votes.projectId, project.id));
 		return { allowed: true as const, votes: projectVotes };
 	});
 
-export const votesQuery = (id: number) =>
+export const votesQuery = (token: string) =>
 	queryOptions({
-		queryKey: ["votes", id],
-		queryFn: () => getVotesForProject({ data: { id } }),
+		queryKey: ["votes", token],
+		queryFn: () => getVotesForProject({ data: { token } }),
 	});
 
 // No owner check — anyone with the link may open a project to vote on it.
 export const getProjectForVote = createServerFn({ method: "GET" })
-	.inputValidator(z.object({ id: z.number().int().positive() }))
+	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
 		const [project] = await db
 			.select()
 			.from(projects)
-			.where(eq(projects.id, data.id))
+			.where(eq(projects.token, data.token))
 			.limit(1);
 		if (!project) throw new Error("project not found");
 		return project;
 	});
 
-export const getProjectForVoteQuery = (id: number) =>
+export const getProjectForVoteQuery = (token: string) =>
 	queryOptions({
-		queryKey: ["project-vote", id],
-		queryFn: () => getProjectForVote({ data: { id } }),
+		queryKey: ["project-vote", token],
+		queryFn: () => getProjectForVote({ data: { token } }),
 	});
 
 export const getMyVote = createServerFn({ method: "GET" })
-	.inputValidator(z.object({ projectId: z.number().int().positive() }))
+	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) return null;
+		const [project] = await db
+			.select()
+			.from(projects)
+			.where(eq(projects.token, data.token))
+			.limit(1);
+		if (!project) throw Error("project not found");
 		const [vote] = await db
 			.select()
 			.from(votes)
-			.where(
-				and(eq(votes.projectId, data.projectId), eq(votes.voterId, user.id)),
-			)
+			.where(and(eq(votes.projectId, project.id), eq(votes.voterId, user.id)))
 			.limit(1);
 		return vote ?? null;
 	});
@@ -169,17 +176,23 @@ export const getMyVote = createServerFn({ method: "GET" })
 export const submitVote = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
-			projectId: z.number().int().positive(),
+			token: z.string().length(32),
 			slots: z.array(z.coerce.date()),
 		}),
 	)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
+		const [project] = await db
+			.select()
+			.from(projects)
+			.where(eq(projects.token, data.token))
+			.limit(1);
+		if (!project) throw Error("project not found");
 		await db
 			.insert(votes)
 			.values({
-				projectId: data.projectId,
+				projectId: project.id,
 				voterId: user.id,
 				voterName: user.name,
 				slots: data.slots,
@@ -189,7 +202,7 @@ export const submitVote = createServerFn({ method: "POST" })
 				target: [votes.projectId, votes.voterId],
 				set: { slots: data.slots, voterName: user.name },
 			});
-		client.notify("votes", String(data.projectId));
+		client.notify("votes", data.token);
 	});
 
 async function currentUser() {

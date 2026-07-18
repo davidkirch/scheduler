@@ -25,6 +25,24 @@ body {
   touch-action: auto;
 }
 
+/* Cell height is computed in ScheduleGrid and fed in as --cell-h so a whole day fits
+   the viewport. Same two reasons this can't be a Tailwind utility as the rule above:
+   it must stay unlayered to beat styled-components' `height: 25px`, and it needs the
+   two-class specificity to win the tie. (Tailwind also eats the `__` as a space in an
+   arbitrary variant, silently retargeting the selector at nothing.) */
+.schedule-grid .rgdp__grid-cell > * {
+  height: var(--cell-h);
+}
+
+/* The library sizes rows as `auto repeat(N, 1fr)`. In a grid with indefinite height every
+   1fr track equalises to the TALLEST row in the grid, so one tall row silently re-inflates
+   all of them and the cells float inside oversized tracks. We already know the height we
+   want, so pin the tracks instead of letting content drive them. Selects the Grid as the
+   parent of the cells because its styled-components class is hashed at runtime. */
+.schedule-grid :has(> .rgdp__grid-cell) {
+  grid-template-rows: auto repeat(var(--rows), var(--cell-h));
+}
+
 .checker-background::before {
   content: "";
   position: absolute;

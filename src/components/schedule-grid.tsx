@@ -1,5 +1,12 @@
 import { format } from "date-fns";
-import { type ReactElement, useMemo } from "react";
+import {
+	type CSSProperties,
+	type ReactElement,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ScheduleSelector from "react-schedule-selector";
 import { StyleSheetManager } from "styled-components";
 import { contiguousRuns } from "@/lib/dates";
@@ -24,6 +31,21 @@ const styleOnlyProps = new Set([
 // time-label column. Only the first run draws labels; the rest render an empty column
 // that collapses to nothing, leaving the column gaps as a seam between runs.
 const TIME_LABEL_WIDTH = 48;
+
+// The library hardcodes `height: 25px` on its date cell. `.rgdp__grid-cell` is a literal
+// class it sets (not a styled-components hash), so it's a stable hook — and styling the
+// child covers both the library's own cell and a custom renderDateCell. The override
+// lives in styles.css, not a Tailwind class; see the comment there for why.
+const DEFAULT_CELL_HEIGHT = 25;
+// ponytail: 10px floor — below this, drag-selection accuracy on touch falls apart.
+// If a project still overflows at the floor, it scrolls; paginate by day if that bites.
+const MIN_CELL_HEIGHT = 10;
+// Date labels + the container's own bottom padding sit inside the measured box.
+const CHROME_ALLOWANCE = 72;
+// The library's own rowGap default. It's a fixed px value, so left alone it stays 4px
+// while cells shrink — at a 10px cell that reads as tiny cells floating far apart, and
+// it silently blows the fit budget since every row costs cellHeight + gap.
+const DEFAULT_ROW_GAP = 4;
 
 const noop = () => {};
 
@@ -51,9 +73,51 @@ export default function ScheduleGrid({
 		[project.dates],
 	);
 
+	// Shrink cells so the whole day fits the viewport, down to the touch floor.
+	const rows = (project.maxTime - project.minTime) * project.hourlyChunks;
+	const gridRef = useRef<HTMLDivElement>(null);
+	const [cellHeight, setCellHeight] = useState(DEFAULT_CELL_HEIGHT);
+	const [rowGap, setRowGap] = useState(DEFAULT_ROW_GAP);
+
+	useLayoutEffect(() => {
+		if (rows <= 0) return;
+		const fitCells = () => {
+			const el = gridRef.current;
+			if (!el) return;
+			// The grid's top is set by the content above it and doesn't move when cell
+			// height changes, so measuring here can't feed back into itself.
+			const available =
+				window.innerHeight - el.getBoundingClientRect().top - CHROME_ALLOWANCE;
+			// A row costs cellHeight + gap, and the gap tracks the cell so it stays a
+			// seam rather than dominating. Size the gap off a first pass, then solve for
+			// the cell height that actually fits with that gap included.
+			const rough = Math.floor(available / rows);
+			const gap = Math.max(
+				0,
+				Math.min(DEFAULT_ROW_GAP, Math.round(rough * 0.16)),
+			);
+			const next = Math.floor((available - rows * gap) / rows);
+			setRowGap(gap);
+			setCellHeight(
+				Math.max(MIN_CELL_HEIGHT, Math.min(DEFAULT_CELL_HEIGHT, next)),
+			);
+		};
+		fitCells();
+		window.addEventListener("resize", fitCells);
+		return () => window.removeEventListener("resize", fitCells);
+	}, [rows]);
+
 	return (
 		<StyleSheetManager shouldForwardProp={(prop) => !styleOnlyProps.has(prop)}>
-			<div className={`flex w-full items-start gap-2 ${className ?? ""}`}>
+			<div
+				ref={gridRef}
+				// --rows feeds the grid-template-rows override in styles.css; every run has
+				// the same row count, so one value covers them all.
+				style={
+					{ "--cell-h": `${cellHeight}px`, "--rows": rows } as CSSProperties
+				}
+				className={`schedule-grid flex w-full items-start gap-2 ${className ?? ""}`}
+			>
 				{runs.map((run, i) => (
 					<div
 						key={run[0].toISOString()}
@@ -75,17 +139,26 @@ export default function ScheduleGrid({
 							minTime={project.minTime}
 							maxTime={project.maxTime}
 							hourlyChunks={project.hourlyChunks}
+							rowGap={`${rowGap}px`}
 							dateFormat="dd D.M"
 							unselectedColor="#FFA2A2"
 							selectedColor="#07E072"
 							renderTimeLabel={
 								i === 0
 									? (time) => (
+											// Height-capped so the label can't out-grow a shrunken cell and
+											// force the row back open. Once cells are too short to hold text,
+											// only whole hours are labelled.
 											<div
-												className="pr-2 text-right text-xs"
-												style={{ width: TIME_LABEL_WIDTH }}
+												className="overflow-hidden pr-2 text-right text-xs leading-none"
+												style={{
+													width: TIME_LABEL_WIDTH,
+													height: `var(--cell-h)`,
+												}}
 											>
-												{format(time, "HH:mm")}
+												{cellHeight >= 14 || time.getMinutes() === 0
+													? format(time, "HH:mm")
+													: ""}
 											</div>
 										)
 									: () => <div />

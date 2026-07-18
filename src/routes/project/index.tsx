@@ -3,12 +3,7 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CircleQuestionMark, Copy, Trash2, Vote } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -62,19 +57,15 @@ export const Route = createFileRoute("/project/")({
 
 function RouteComponent() {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
-	const { data: session } = authClient.useSession();
 
+	const { data: session } = authClient.useSession();
 	const { data: projects } = useSuspenseQuery(projectsQuery);
 
 	const [dates, setDates] = useState<Date[]>([]);
 	const [hourlyChunks, setHourlyChunks] = useState("60");
 	const [showResultsToGuests, setShowResultsToGuests] = useState(false);
 	const [error, setError] = useState("");
-
-	// One dialog for the whole list rather than one per row: a dialog rendered inside
-	// ContextMenuContent unmounts with the menu the moment the item is clicked.
 	const [toDelete, setToDelete] = useState<Project | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [deleteError, setDeleteError] = useState("");
@@ -93,7 +84,7 @@ function RouteComponent() {
 		onSuccess: (project) => {
 			navigate({
 				to: "/project/$projectSlug",
-				params: { projectSlug: String(project.id) },
+				params: { projectSlug: project.token },
 			});
 		},
 	});
@@ -103,7 +94,7 @@ function RouteComponent() {
 		setDeleting(true);
 		setDeleteError("");
 		try {
-			await deleteProject.mutate(toDelete.id);
+			await deleteProject.mutate(toDelete.token);
 			setToDelete(null);
 		} catch (e) {
 			setDeleteError(
@@ -233,11 +224,11 @@ function RouteComponent() {
 				<div className="flex flex-col p-4">
 					<h1>projects</h1>
 					{projects.map((project) => (
-						<ContextMenu key={project.id}>
+						<ContextMenu key={project.token}>
 							<ContextMenuTrigger>
 								<Link
 									to="/project/$projectSlug"
-									params={{ projectSlug: String(project.id) }}
+									params={{ projectSlug: project.token }}
 									preload="intent"
 								>
 									{project.name}
@@ -247,7 +238,7 @@ function RouteComponent() {
 								<ContextMenuItem>
 									<Link
 										to="/project/$projectSlug/vote"
-										params={{ projectSlug: String(project.id) }}
+										params={{ projectSlug: project.token }}
 										className="flex flex-row gap-1.5"
 									>
 										<Vote />
@@ -257,7 +248,7 @@ function RouteComponent() {
 								<ContextMenuItem
 									onClick={() => {
 										navigator.clipboard.writeText(
-											`${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.id}/vote`,
+											`${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.token}/vote`,
 										);
 										toast.success("copied votes link", {
 											position: "top-center",

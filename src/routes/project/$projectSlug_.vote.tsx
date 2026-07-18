@@ -11,7 +11,7 @@ import { getMyVote, getProjectForVote, submitVote } from "@/server/projects";
 export const Route = createFileRoute("/project/$projectSlug_/vote")({
 	ssr: false,
 	loader: ({ params }) =>
-		getProjectForVote({ data: { id: Number(params.projectSlug) } }),
+		getProjectForVote({ data: { token: params.projectSlug } }),
 	component: RouteComponent,
 });
 
@@ -28,13 +28,13 @@ function RouteComponent() {
 	// nothing to load, so the grid just stays empty.
 	useEffect(() => {
 		if (!user) return;
-		getMyVote({ data: { projectId: project.id } }).then((vote) => {
+		getMyVote({ data: { token: project.token } }).then((vote) => {
 			if (vote?.slots) setSchedule(vote.slots.map((s) => new Date(s)));
 		});
-	}, [user, project.id]);
+	}, [user, project.token]);
 
 	return (
-		<div className="flex flex-col items-center p-4 w-full gap-4 bg-blue-200 h-screen">
+		<div className="flex flex-col items-center p-4 w-full gap-4 bg-blue-200">
 			<h1>{project.name}</h1>
 			{!locked && (
 				<div className="absolute left-4">
@@ -54,7 +54,7 @@ function RouteComponent() {
 							size="lg"
 							onClick={async () => {
 								await submitVote({
-									data: { projectId: project.id, slots: schedule },
+									data: { token: project.token, slots: schedule },
 								});
 								toast.success("vote has been saved", {
 									position: "top-center",
@@ -69,7 +69,7 @@ function RouteComponent() {
 					<div className="absolute inset-0 grid place-items-center">
 						<div className="w-sm rounded-lg bg-white p-4 shadow">
 							<h2 className="pb-2">enter your name to pick your times</h2>
-							<LoginSignUp offerAnonymous offerSignIn />
+							<LoginSignUp offerAnonymous offerSignIn offerSignUp />
 						</div>
 					</div>
 				)}

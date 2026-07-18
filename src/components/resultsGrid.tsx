@@ -61,7 +61,7 @@ export default function ResultsGrid({
 							<button
 								type="button"
 								aria-label={`${format(time, "EEE d MMM HH:mm")} — ${count} of ${votes.length} free`}
-								className="size-full rounded-xs border border-black/10"
+								className="size-full rounded-xs border border-black/10 cursor-default"
 								style={{
 									background: heat(count / votes.length),
 									outline: hovered === iso ? "2px solid black" : undefined,

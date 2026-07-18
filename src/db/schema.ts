@@ -22,6 +22,7 @@ export const projects = pgTable(
 	"projects",
 	{
 		id: integer().primaryKey().generatedAlwaysAsIdentity(),
+		token: varchar({ length: 32 }).unique().notNull(),
 		name: varchar({ length: 255 }).notNull(),
 		ownerId: text("owner_id")
 			.notNull()

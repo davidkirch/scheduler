@@ -2,6 +2,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
+import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Separator } from "./ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -30,14 +31,21 @@ const LoginSignUp = ({
 	offerAnonymous = false,
 	offerSignIn = false,
 	offerSignUp = false,
+	asCard = false,
+	showTitle = false,
+	successAction,
 }: {
 	offerAnonymous?: boolean;
 	offerSignIn?: boolean;
 	offerSignUp?: boolean;
+	asCard?: boolean;
+	showTitle?: boolean;
+	successAction?: () => void;
 }) => {
 	const [error, setError] = useState<string | null>(null);
-	return (
-		<div className="w-full">
+	const content = (
+		<div className="flex flex-col gap-4 w-full">
+			{showTitle === true && <h3>log in or sign up</h3>}
 			<Tabs>
 				<TabsList className="w-full">
 					{offerAnonymous && (
@@ -62,6 +70,7 @@ const LoginSignUp = ({
 									const { name } = parseForm(anonymousSchema, e.currentTarget);
 									await authClient.signIn.anonymous();
 									await authClient.updateUser({ name });
+									successAction?.();
 								} catch (err) {
 									setError(
 										err instanceof Error
@@ -71,9 +80,13 @@ const LoginSignUp = ({
 								}
 							}}
 						>
-							<p>name</p>
-							<Input name="name" type="text" required />
-							<Button type="submit">log in anonymous</Button>
+							<div className="flex flex-col gap-4">
+								<div>
+									<p>name</p>
+									<Input name="name" type="text" required />
+								</div>
+								<Button type="submit">log in anonymous</Button>
+							</div>
 						</form>
 					</TabsContent>
 				)}
@@ -93,6 +106,7 @@ const LoginSignUp = ({
 										email: email,
 										password: password,
 									});
+									successAction?.();
 								} catch (err) {
 									setError(
 										err instanceof Error
@@ -102,21 +116,28 @@ const LoginSignUp = ({
 								}
 							}}
 						>
-							<p>email</p>
-							<Input name="email" type="email" required />
-							<p>password</p>
-							<Input name="password" type="password" required />
-							<Button type="submit">log in</Button>
-							<Separator className="mt-2 mb-2" />
-							<Button
-								type="button"
-								onClick={async () =>
-									await authClient.signIn.social({ provider: "github" })
-								}
-								className="w-full"
-							>
-								sign in with github
-							</Button>
+							<div className="flex flex-col gap-4">
+								<div>
+									<p>email</p>
+									<Input name="email" type="email" required />
+								</div>
+								<div>
+									<p>password</p>
+									<Input name="password" type="password" required />
+								</div>
+								<Button type="submit">log in</Button>
+								<Separator />
+								<Button
+									type="button"
+									onClick={async () => {
+										await authClient.signIn.social({ provider: "github" });
+										successAction?.();
+									}}
+									className="w-full"
+								>
+									sign in with github
+								</Button>
+							</div>
 						</form>
 					</TabsContent>
 				)}
@@ -137,6 +158,7 @@ const LoginSignUp = ({
 										password: password,
 										name: name,
 									});
+									successAction?.();
 								} catch (err) {
 									setError(
 										err instanceof Error
@@ -146,28 +168,43 @@ const LoginSignUp = ({
 								}
 							}}
 						>
-							<p>name</p>
-							<Input name="name" type="text" required />
-							<p>email</p>
-							<Input name="email" type="email" required />
-							<p>password</p>
-							<Input name="password" type="password" required />
-							<Button type="submit">sign up</Button>
-							<Separator className="mt-2 mb-2" />
-							<Button
-								type="button"
-								onClick={async () =>
-									await authClient.signIn.social({ provider: "github" })
-								}
-								className="w-full"
-							>
-								sign in with github
-							</Button>
+							<div className="flex flex-col gap-4">
+								<div>
+									<p>name</p>
+									<Input name="name" type="text" required />
+								</div>
+								<div>
+									<p>email</p>
+									<Input name="email" type="email" required />
+								</div>
+								<div>
+									<p>password</p>
+									<Input name="password" type="password" required />
+								</div>
+								<Button type="submit">sign up</Button>
+								<Separator />
+								<Button
+									type="button"
+									onClick={async () => {
+										await authClient.signIn.social({ provider: "github" });
+										successAction?.();
+									}}
+									className="w-full"
+								>
+									sign up with github
+								</Button>
+							</div>
 						</form>
 					</TabsContent>
 				)}
 			</Tabs>
 		</div>
+	);
+
+	return asCard ? (
+		<Card className="w-full max-w-sm p-4 h-fit">{content}</Card>
+	) : (
+		content
 	);
 };
 
