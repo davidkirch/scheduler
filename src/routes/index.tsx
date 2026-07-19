@@ -14,7 +14,7 @@ function App() {
 	const navigate = useNavigate();
 
 	return (
-		<div className="flex flex-col p-4 bg-blue-200 h-screen items-center gap-20">
+		<div className="flex flex-col p-4 bg-surface-page min-h-dvh items-center gap-20">
 			<h1>welcome to scheduler</h1>
 			<UserBubble />
 			{session === null && (

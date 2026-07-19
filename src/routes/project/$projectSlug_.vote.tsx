@@ -34,7 +34,7 @@ function RouteComponent() {
 	}, [user, project.token]);
 
 	return (
-		<div className="flex flex-col items-center p-4 w-full gap-4 bg-blue-200">
+		<div className="flex flex-col items-center p-4 w-full gap-4 bg-surface-page">
 			<h1>{project.name}</h1>
 			{!locked && (
 				<div className="absolute left-4">
@@ -46,6 +46,8 @@ function RouteComponent() {
 				<div inert={locked} className={locked ? "opacity-50" : undefined}>
 					<ScheduleGrid
 						project={project}
+						// Reserve the save button + the page's gap and bottom padding.
+						bottomAllowance={104}
 						selection={schedule}
 						onChange={setSchedule}
 					/>

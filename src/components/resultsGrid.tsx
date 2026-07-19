@@ -4,10 +4,11 @@ import ScheduleGrid from "@/components/schedule-grid";
 import { tallyVotes } from "@/server/votes";
 import type { Project, Vote } from "@/types";
 
-// Matches the green the vote grid uses for a picked slot. Mixed toward white rather than
-// transparent so an empty cell reads as empty on whatever the page background is.
+// Matches the green the vote grid uses for a picked slot. Mixed toward --slot-empty
+// rather than transparent so an empty cell reads as empty on whatever the page is;
+// that token follows the theme, so this stays correct in dark mode too.
 const heat = (share: number) =>
-	`color-mix(in oklab, #07E072 ${Math.round(share * 100)}%, white)`;
+	`color-mix(in oklab, var(--slot-free) ${Math.round(share * 100)}%, var(--slot-empty))`;
 
 export default function ResultsGrid({
 	project,
@@ -52,6 +53,8 @@ export default function ResultsGrid({
 			<div className="flex w-full items-start gap-4">
 				<ScheduleGrid
 					project={project}
+					// Nothing sits below the grid here — just the page's own bottom padding.
+					bottomAllowance={32}
 					// Hands touch-scrolling back to the page — see .results-grid in styles.css.
 					className="results-grid"
 					renderDateCell={(time) => {

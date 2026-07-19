@@ -40,8 +40,11 @@ const DEFAULT_CELL_HEIGHT = 25;
 // ponytail: 10px floor — below this, drag-selection accuracy on touch falls apart.
 // If a project still overflows at the floor, it scrolls; paginate by day if that bites.
 const MIN_CELL_HEIGHT = 10;
-// Date labels + the container's own bottom padding sit inside the measured box.
-const CHROME_ALLOWANCE = 72;
+// Space to leave below the grid: date labels plus whatever the page puts underneath.
+// Pages differ (the vote page has a save button below the grid, the results page has
+// nothing), so callers override it — one global guess left a gap on one page and
+// clipped the padding on the other.
+const DEFAULT_BOTTOM_ALLOWANCE = 72;
 // The library's own rowGap default. It's a fixed px value, so left alone it stays 4px
 // while cells shrink — at a 10px cell that reads as tiny cells floating far apart, and
 // it silently blows the fit budget since every row costs cellHeight + gap.
@@ -61,12 +64,15 @@ export default function ScheduleGrid({
 	onChange,
 	renderDateCell,
 	className,
+	bottomAllowance = DEFAULT_BOTTOM_ALLOWANCE,
 }: {
 	project: Project;
 	selection?: Date[];
 	onChange?: (selection: Date[]) => void;
 	renderDateCell?: (time: Date) => ReactElement;
 	className?: string;
+	/** Px to reserve below the grid for whatever the page renders under it. */
+	bottomAllowance?: number;
 }) {
 	const runs = useMemo(
 		() => contiguousRuns(project.dates ?? []),
@@ -87,7 +93,7 @@ export default function ScheduleGrid({
 			// The grid's top is set by the content above it and doesn't move when cell
 			// height changes, so measuring here can't feed back into itself.
 			const available =
-				window.innerHeight - el.getBoundingClientRect().top - CHROME_ALLOWANCE;
+				window.innerHeight - el.getBoundingClientRect().top - bottomAllowance;
 			// A row costs cellHeight + gap, and the gap tracks the cell so it stays a
 			// seam rather than dominating. Size the gap off a first pass, then solve for
 			// the cell height that actually fits with that gap included.
@@ -105,7 +111,7 @@ export default function ScheduleGrid({
 		fitCells();
 		window.addEventListener("resize", fitCells);
 		return () => window.removeEventListener("resize", fitCells);
-	}, [rows]);
+	}, [rows, bottomAllowance]);
 
 	return (
 		<StyleSheetManager shouldForwardProp={(prop) => !styleOnlyProps.has(prop)}>
@@ -141,8 +147,8 @@ export default function ScheduleGrid({
 							hourlyChunks={project.hourlyChunks}
 							rowGap={`${rowGap}px`}
 							dateFormat="dd D.M"
-							unselectedColor="#FFA2A2"
-							selectedColor="#07E072"
+							unselectedColor="var(--slot-busy)"
+							selectedColor="var(--slot-free)"
 							renderTimeLabel={
 								i === 0
 									? (time) => (

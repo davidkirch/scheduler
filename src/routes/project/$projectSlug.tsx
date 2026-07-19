@@ -34,7 +34,7 @@ function RouteComponent() {
 	const [copied, setCopied] = useState(false);
 
 	return (
-		<div className="flex flex-col w-full h-screen bg-blue-200 items-center p-4 gap-4">
+		<div className="flex flex-col w-full min-h-dvh bg-surface-page items-center p-4 gap-4">
 			<div className="relative flex w-full justify-center">
 				<Link to="/project" preload="intent">
 					<Button className="absolute left-0">

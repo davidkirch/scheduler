@@ -106,7 +106,7 @@ function RouteComponent() {
 	}
 
 	return session ? (
-		<div className="bg-blue-200 flex flex-col w-full h-screen items-center align-center">
+		<div className="bg-surface-page flex flex-col w-full min-h-dvh items-center align-center">
 			<div className="relative flex flex-row w-full justify-center p-4">
 				<div className="absolute left-4">
 					<UserBubble />
@@ -304,7 +304,7 @@ function RouteComponent() {
 			</AlertDialog>
 		</div>
 	) : (
-		<div className="flex flex-col items-center justify-center w-full h-screen oberflow-none bg-amber-300">
+		<div className="flex flex-col items-center justify-center w-full min-h-dvh oberflow-none bg-amber-300">
 			<LoginSignUp offerAnonymous offerSignIn />
 		</div>
 	);
