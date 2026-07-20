@@ -3,10 +3,16 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	Navigate,
+	useNavigate,
+} from "@tanstack/react-router";
 import { CircleQuestionMark, Copy, Trash2, Vote } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { LabelWithTip } from "@/components/labelWithTip";
 import LoginSignUp from "@/components/logInSignUp";
 import {
 	AlertDialog,
@@ -51,6 +57,10 @@ export const Route = createFileRoute("/project/")({
 	ssr: false,
 	loader: ({ context }) => {
 		context.queryClient.ensureQueryData(projectsQuery);
+	},
+	errorComponent: () => {
+		const navigate = useNavigate();
+		navigate({ to: "/" });
 	},
 	component: RouteComponent,
 });
@@ -108,13 +118,15 @@ function RouteComponent() {
 	return session ? (
 		<div className="bg-surface-page flex flex-col w-full min-h-dvh items-center align-center">
 			<div className="relative flex flex-row w-full justify-center p-4">
-				<div className="absolute left-4">
+				<div className="absolute left-8">
 					<UserBubble />
 				</div>
-				<h1 className="pt-2">scheduler</h1>
+				<h1>scheduler</h1>
 			</div>
 
-			<div className="w-6/10 h-full">
+			{/* Fluid gutter rather than a percentage width: a % gutter can't clamp, so it
+			    kept its share while the form hit its min-width and overflowed to the right. */}
+			<div className="w-full max-w-4xl px-(--pad-page) h-full">
 				<form
 					onSubmit={async (e) => {
 						setError("");
@@ -143,8 +155,12 @@ function RouteComponent() {
 						<p>project name</p>
 						<Input name="name" />
 					</div>
-					<div className="flex flex-row gap-4 justify-between">
-						<div>
+					{/* Stacks at md. The row needs ~580px to honour min-w-70 plus the settings
+					    column, so it changes shape well before either column is squeezed. */}
+					<div className="flex flex-col md:flex-row gap-4">
+						{/* mx-auto: max-w-100 caps the calendar below the column's width, so
+						    without this it sits left-aligned against the slack. */}
+						<div className="flex-1 mx-auto max-w-100 min-w-70 md:min-w-70">
 							<LabelWithTip
 								label="dates"
 								tipContent="select all dates available for the poll."
@@ -154,74 +170,79 @@ function RouteComponent() {
 								selected={dates}
 								// day-picker hands back the whole new array; undefined means "none left"
 								onSelect={(d) => setDates(d ?? [])}
-								className="w-100"
+								className="w-full"
 							/>
 						</div>
-						<div className="flex flex-col justify-between w-full">
-							<div className="flex flex-col gap-2">
-								<div className="flex-1 ">
+						{/* Needs `flex` as well as `flex-1`: the inner column only stretches to
+						    this column's height as a flex item, and that height is what lets
+						    `flex-1` on the fields block push the create button to the bottom. */}
+						<div className="flex flex-1">
+							<div className="flex flex-col gap-2 w-full">
+								<div className="flex-1">
+									<div>
+										<LabelWithTip
+											label="pick start time"
+											tipContent="defines the earliest time you can pick for each day."
+										/>
+										<Input
+											type="time"
+											name="minTime"
+											step="60"
+											defaultValue="12:00"
+											className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+										/>
+									</div>
+									<div>
+										<LabelWithTip
+											label="pick end time"
+											tipContent="defines the latest time you can pick for each day."
+										/>
+										<Input
+											type="time"
+											name="maxTime"
+											step="60"
+											defaultValue="20:00"
+											className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+										/>
+									</div>
 									<LabelWithTip
-										label="pick start time"
-										tipContent="defines the earliest time you can pick for each day."
+										label="granularity"
+										tipContent="defines the size of time slots. if you set it to 30 mins you can select two slots for each hour."
 									/>
-									<Input
-										type="time"
-										name="minTime"
-										step="60"
-										defaultValue="12:00"
-										className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-									/>
+									<div>
+										<Tabs
+											defaultValue="60"
+											value={hourlyChunks}
+											onValueChange={setHourlyChunks}
+										>
+											<TabsList className="w-full">
+												<TabsTrigger value="60">1 hour</TabsTrigger>
+												<TabsTrigger value="30">30 minutes</TabsTrigger>
+												<TabsTrigger value="15">15 minutes</TabsTrigger>
+											</TabsList>
+										</Tabs>
+									</div>
+									<div>
+										<LabelWithTip
+											label="show results to guests"
+											tipContent="if checked, guests can see results. if not only you are able to view results."
+										/>
+										<Switch
+											name="show-results-to-guests"
+											checked={showResultsToGuests}
+											onCheckedChange={setShowResultsToGuests}
+										/>
+									</div>
 								</div>
 								<div>
-									<LabelWithTip
-										label="pick end time"
-										tipContent="defines the latest time you can pick for each day."
-									/>
-									<Input
-										type="time"
-										name="maxTime"
-										step="60"
-										defaultValue="20:00"
-										className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-									/>
+									<p className="text-red-600">{error}</p>
+									<Button type="submit">create</Button>
 								</div>
-								<LabelWithTip
-									label="granularity"
-									tipContent="defines the size of time slots. if you set it to 30 mins you can select two slots for each hour."
-								/>
-								<div>
-									<Tabs
-										defaultValue="60"
-										value={hourlyChunks}
-										onValueChange={setHourlyChunks}
-									>
-										<TabsList className="w-full">
-											<TabsTrigger value="60">1 hour</TabsTrigger>
-											<TabsTrigger value="30">30 minutes</TabsTrigger>
-											<TabsTrigger value="15">15 minutes</TabsTrigger>
-										</TabsList>
-									</Tabs>
-								</div>
-								<div>
-									<LabelWithTip
-										label="show results to guests"
-										tipContent="if checked, guests can see results. if not only you are able to view results."
-									/>
-									<Switch
-										name="show-results-to-guests"
-										checked={showResultsToGuests}
-										onCheckedChange={setShowResultsToGuests}
-									/>
-								</div>
-							</div>
-							<div>
-								<p className="text-red-600">{error}</p>
-								<Button type="submit">create</Button>
 							</div>
 						</div>
 					</div>
 				</form>
-				<div className="flex flex-col p-4">
+				<div className="flex flex-col pt-4">
 					<h1>projects</h1>
 					{projects.map((project) => (
 						<ContextMenu key={project.token}>
@@ -248,7 +269,7 @@ function RouteComponent() {
 								<ContextMenuItem
 									onClick={() => {
 										navigator.clipboard.writeText(
-											`${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.token}/vote`,
+											`${window.location.origin}/project/${project.token}/vote`,
 										);
 										toast.success("copied votes link", {
 											position: "top-center",
@@ -304,33 +325,8 @@ function RouteComponent() {
 			</AlertDialog>
 		</div>
 	) : (
-		<div className="flex flex-col items-center justify-center w-full min-h-dvh oberflow-none bg-amber-300">
+		<div className="flex flex-col items-center justify-center w-full min-h-dvh bg-amber-300">
 			<LoginSignUp offerAnonymous offerSignIn />
-		</div>
-	);
-}
-
-function LabelWithTip({
-	label,
-	tipContent,
-	tipHeading,
-}: {
-	label: string;
-	tipContent: string;
-	tipHeading?: string;
-}) {
-	return (
-		<div className="flex flex-row gap-1 items-center">
-			<p>{label}</p>
-			<Tooltip>
-				<TooltipTrigger render={<CircleQuestionMark className="h-4" />} />
-				<TooltipContent>
-					<div className="flex flex-col">
-						<p className="font-bold text-lg">{tipHeading}</p>
-						<p>{tipContent}</p>
-					</div>
-				</TooltipContent>
-			</Tooltip>
 		</div>
 	);
 }

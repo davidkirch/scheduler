@@ -50,7 +50,7 @@ export default function ResultsGrid({
 				</span>
 			</div>
 
-			<div className="flex w-full items-start gap-4">
+			<div className="flex flex-col sm:flex-row w-full items-start gap-4">
 				<ScheduleGrid
 					project={project}
 					// Nothing sits below the grid here — just the page's own bottom padding.

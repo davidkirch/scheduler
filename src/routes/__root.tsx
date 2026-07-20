@@ -70,6 +70,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					defaultTheme="system"
 					enableSystem
 					disableTransitionOnChange
+					themes={["light", "dark", "peach"]}
 				>
 					{children}
 					<Toaster />

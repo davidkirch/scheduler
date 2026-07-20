@@ -1,10 +1,21 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowBigLeft, Clipboard, ClipboardCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { LabelWithTip } from "@/components/labelWithTip";
 import ResultsGrid from "@/components/resultsGrid";
 import { Button } from "@/components/ui/button";
-import { getProjectQuery, votesQuery } from "@/server/projects";
+import { Switch } from "@/components/ui/switch";
+import {
+	getProjectQuery,
+	updateVisibilityMutation,
+	votesQuery,
+} from "@/server/projects";
 
 export const Route = createFileRoute("/project/$projectSlug")({
 	ssr: false,
@@ -12,6 +23,19 @@ export const Route = createFileRoute("/project/$projectSlug")({
 		context.queryClient.ensureQueryData(getProjectQuery(params.projectSlug));
 		context.queryClient.ensureQueryData(votesQuery(params.projectSlug));
 	},
+	errorComponent: ({ error }) => (
+		<>
+			<div className="flex flex-col w-full items-center justify-center p-8 gap-8">
+				{error.message}
+				<Link to="/project" preload="intent">
+					<Button>
+						<ArrowBigLeft />
+						<p>back to projects</p>
+					</Button>
+				</Link>
+			</div>
+		</>
+	),
 	component: RouteComponent,
 });
 
@@ -30,7 +54,15 @@ function RouteComponent() {
 		return () => es.close(); // triggers request.signal abort → server cleanup
 	}, [projectSlug, queryClient]);
 
-	const share_link = `${import.meta.env.VITE_PROTOCOL}://${import.meta.env.VITE_BASE_URL}/project/${project.token}/vote`;
+	const updateVisibility = useMutation({
+		...updateVisibilityMutation,
+		onSuccess: () => {
+			toast.success("updated visibility");
+			queryClient.invalidateQueries(getProjectQuery(projectSlug));
+		},
+	});
+
+	const share_link = `${window.location.origin}/project/${project.token}/vote`;
 	const [copied, setCopied] = useState(false);
 
 	return (
@@ -39,7 +71,7 @@ function RouteComponent() {
 				<Link to="/project" preload="intent">
 					<Button className="absolute left-0">
 						<ArrowBigLeft />
-						back to projects
+						<p className="max-sm:hidden">back to projects</p>
 					</Button>
 				</Link>
 				<h1>{project.name}</h1>
@@ -48,7 +80,7 @@ function RouteComponent() {
 			<div className="flex flex-col w-full">
 				<h2>results</h2>
 				<div className="flex flex-row items-center gap-2">
-					<p>vote link: {share_link}</p>
+					<a href={share_link}>vote link: {share_link}</a>
 					<Button
 						variant="ghost"
 						onClick={() => {
@@ -62,6 +94,25 @@ function RouteComponent() {
 						{copied ? <ClipboardCheck /> : <Clipboard />}
 					</Button>
 				</div>
+				<div className="flex flex-col pt-2 pb-2">
+					<LabelWithTip
+						label="show results to guests"
+						tipContent="if checked, guests can see results. if not only you are able to view results."
+					/>
+					<Switch
+						name="show-results-to-guests"
+						checked={project.showResultsToGuests}
+						onCheckedChange={(state) => {
+							if (state !== project.showResultsToGuests) {
+								updateVisibility.mutate({
+									token: project.token,
+									showResultsToGuests: state,
+								});
+							}
+						}}
+					/>
+				</div>
+
 				{results.allowed ? (
 					<ResultsGrid project={project} votes={results.votes} />
 				) : (

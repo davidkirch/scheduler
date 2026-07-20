@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import LoginSignUp from "@/components/logInSignUp";
-
 import UserBubble from "@/components/userBubble";
 import { authClient } from "@/lib/auth-client";
 
@@ -12,6 +12,10 @@ export const Route = createFileRoute("/")({
 function App() {
 	const { data: session } = authClient.useSession();
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (session) navigate({ to: "/project" });
+	}, [session, navigate]);
 
 	return (
 		<div className="flex flex-col p-4 bg-surface-page min-h-dvh items-center gap-20">

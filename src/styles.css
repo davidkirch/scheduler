@@ -98,6 +98,11 @@ body {
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0.625rem;
+  /* Page gutter. Fluid so it gives ground as the viewport narrows. A percentage
+     width can't do this: its gutter keeps its share while the content hits its
+     min-width floor, so the content overflows one side instead of the gutter
+     yielding. Not themed — layout, not palette. */
+  --pad-page: clamp(0.5rem, 4vw, 2rem);
 
   /* App surfaces and the vote/results palette. These are the knobs a new theme
      overrides — add a `.theme-<name>` block redefining them and nothing else moves. */
@@ -133,6 +138,35 @@ body {
   --surface-page: oklch(0.256 0.043 254.1);
   --slot-free: oklch(0.646 0.174 148.2);
   --slot-busy: oklch(0.548 0.113 20.9);
+  --slot-empty: oklch(0.256 0.043 254.1);
+}
+
+.peach {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+
+  /* Same tokens, dark values. Slot hues keep their identity but drop in lightness so
+     they sit on a dark page; --slot-empty follows the surface instead of white. */
+  --surface-page: oklch(80.8% 0.114 19.571);
+  --slot-free: oklch(86.935% 0.27168 145.232 / 0.78);
+  --slot-busy: oklch(62.803% 0.25754 29.002);
   --slot-empty: oklch(0.256 0.043 254.1);
 }
 

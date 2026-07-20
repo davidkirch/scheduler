@@ -4,8 +4,11 @@ import { anonymous } from "better-auth/plugins";
 import { and, eq, exists } from "drizzle-orm";
 import { db } from "@/db";
 import { projects, votes } from "@/db/schema";
+import { env } from "@/env";
 
 export const auth = betterAuth({
+	secret: env.BETTER_AUTH_SECRET,
+	baseURL: env.BETTER_AUTH_URL,
 	database: drizzleAdapter(db, { provider: "pg" }),
 	emailAndPassword: { enabled: true },
 	user: {
@@ -14,10 +17,13 @@ export const auth = betterAuth({
 		},
 	},
 	socialProviders: {
-		github: {
-			clientId: process.env.GITHUB_CLIENT_ID as string,
-			clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-		},
+		...(env.GITHUB_CLIENT_ID &&
+			env.GITHUB_CLIENT_SECRET && {
+				github: {
+					clientId: env.GITHUB_CLIENT_ID,
+					clientSecret: env.GITHUB_CLIENT_SECRET,
+				},
+			}),
 	},
 	plugins: [
 		anonymous({

@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import z from "zod";
 import { client, db } from "@/db";
 import { projects, usersTable, votes } from "@/db/schema";
@@ -36,7 +36,13 @@ export const getProject = createServerFn({ method: "GET" })
 			.select()
 			.from(projects)
 			.where(
-				and(eq(projects.ownerId, user.id), eq(projects.token, data.token)),
+				and(
+					or(
+						eq(projects.ownerId, user.id),
+						eq(projects.showResultsToGuests, true),
+					),
+					eq(projects.token, data.token),
+				),
 			);
 		if (!project) throw new Error("project not found");
 		return project;
@@ -105,6 +111,27 @@ export const createProjectMutation = {
 		createProject({ data }),
 };
 
+const updateVisibilityInput = z.object({
+	token: z.string().length(32),
+	showResultsToGuests: z.boolean(),
+});
+
+export const updateVisibility = createServerFn({ method: "POST" })
+	.inputValidator(updateVisibilityInput)
+	.handler(async ({ data }) => {
+		const user = await currentUser();
+		if (!user) throw new Error("log in first");
+		return await db
+			.update(projects)
+			.set({ showResultsToGuests: data.showResultsToGuests })
+			.where(eq(projects.ownerId, user.id));
+	});
+
+export const updateVisibilityMutation = {
+	mutationFn: (data: z.infer<typeof updateVisibilityInput>) =>
+		updateVisibility({ data }),
+};
+
 export const getVotesForProject = createServerFn({
 	method: "GET",
 })
@@ -127,6 +154,24 @@ export const getVotesForProject = createServerFn({
 			.from(votes)
 			.where(eq(votes.projectId, project.id));
 		return { allowed: true as const, votes: projectVotes };
+	});
+
+export const isAllowedToViewVotesForProject = createServerFn({
+	method: "GET",
+})
+	.inputValidator(z.object({ token: z.string().length(32) }))
+	.handler(async ({ data }) => {
+		const user = await currentUser();
+		if (!user) throw new Error("log in first");
+		const [project] = await db
+			.select()
+			.from(projects)
+			.where(eq(projects.token, data.token))
+			.limit(1);
+		if (!project) throw new Error("project not found");
+
+		const allowed = project.ownerId === user.id || project.showResultsToGuests;
+		return allowed;
 	});
 
 export const votesQuery = (token: string) =>

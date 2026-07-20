@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import LoginSignUp from "@/components/logInSignUp";
@@ -6,7 +6,12 @@ import ScheduleGrid from "@/components/schedule-grid";
 import { Button } from "@/components/ui/button";
 import UserBubble from "@/components/userBubble";
 import { authClient } from "@/lib/auth-client";
-import { getMyVote, getProjectForVote, submitVote } from "@/server/projects";
+import {
+	getMyVote,
+	getProjectForVote,
+	isAllowedToViewVotesForProject,
+	submitVote,
+} from "@/server/projects";
 
 export const Route = createFileRoute("/project/$projectSlug_/vote")({
 	ssr: false,
@@ -23,6 +28,7 @@ function RouteComponent() {
 	const project = Route.useLoaderData();
 
 	const [schedule, setSchedule] = useState<Date[]>([]);
+	const [showResultsButton, setShowResultsButton] = useState(false);
 
 	// Prefill with this user's earlier vote once a session exists. A fresh guest has
 	// nothing to load, so the grid just stays empty.
@@ -32,6 +38,19 @@ function RouteComponent() {
 			if (vote?.slots) setSchedule(vote.slots.map((s) => new Date(s)));
 		});
 	}, [user, project.token]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		checkResultsAvailability();
+	}, []);
+
+	async function checkResultsAvailability() {
+		setShowResultsButton(
+			await isAllowedToViewVotesForProject({
+				data: { token: project.token },
+			}),
+		);
+	}
 
 	return (
 		<div className="flex flex-col items-center p-4 w-full gap-4 bg-surface-page">
@@ -51,7 +70,7 @@ function RouteComponent() {
 						selection={schedule}
 						onChange={setSchedule}
 					/>
-					<div className="flex w-full items-center justify-center p-4">
+					<div className="flex w-full items-center justify-center p-4 gap-4">
 						<Button
 							size="lg"
 							onClick={async () => {
@@ -61,10 +80,22 @@ function RouteComponent() {
 								toast.success("vote has been saved", {
 									position: "top-center",
 								});
+								checkResultsAvailability();
 							}}
 						>
 							save
 						</Button>
+						<Link
+							to="/project/$projectSlug"
+							params={{ projectSlug: project.token }}
+						>
+							<Button
+								className={showResultsButton !== true ? "hidden" : ""}
+								size="lg"
+							>
+								see vote results
+							</Button>
+						</Link>
 					</div>
 				</div>
 				{locked && !isPending && (
