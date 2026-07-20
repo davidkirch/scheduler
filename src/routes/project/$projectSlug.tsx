@@ -4,8 +4,8 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowBigLeft, Clipboard, ClipboardCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowBigLeft, Clipboard, ClipboardCheck, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LabelWithTip } from "@/components/labelWithTip";
 import ResultsGrid from "@/components/resultsGrid";
@@ -44,6 +44,8 @@ function RouteComponent() {
 	const { data: project } = useSuspenseQuery(getProjectQuery(projectSlug));
 	const { data: results } = useSuspenseQuery(votesQuery(projectSlug));
 
+	const [updateVisibilityPending, setUpdateVisibilityPending] = useState(false);
+
 	const queryClient = useQueryClient();
 	useEffect(() => {
 		const es = new EventSource(`/api/votes/${projectSlug}/stream`);
@@ -54,11 +56,33 @@ function RouteComponent() {
 		return () => es.close(); // triggers request.signal abort → server cleanup
 	}, [projectSlug, queryClient]);
 
+	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const startTimer = () => {
+		timerRef.current = setTimeout(() => setUpdateVisibilityPending(true), 250);
+	};
+
+	const cancelTimer = () => {
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+	};
+
 	const updateVisibility = useMutation({
 		...updateVisibilityMutation,
-		onSuccess: () => {
-			toast.success("updated visibility");
-			queryClient.invalidateQueries(getProjectQuery(projectSlug));
+		onMutate: () => {
+			startTimer();
+		},
+		onError: ({ message }) =>
+			toast.error(`could not update visibility: ${message}`, {
+				position: "top-center",
+			}),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries(getProjectQuery(projectSlug));
+			cancelTimer();
+			toast.success("updated visibility", { position: "top-center" });
+			setUpdateVisibilityPending(false);
 		},
 	});
 
@@ -99,18 +123,23 @@ function RouteComponent() {
 						label="show results to guests"
 						tipContent="if checked, guests can see results. if not only you are able to view results."
 					/>
-					<Switch
-						name="show-results-to-guests"
-						checked={project.showResultsToGuests}
-						onCheckedChange={(state) => {
-							if (state !== project.showResultsToGuests) {
-								updateVisibility.mutate({
-									token: project.token,
-									showResultsToGuests: state,
-								});
-							}
-						}}
-					/>
+					<div className="flex flex-row gap-2 items-center">
+						<Switch
+							name="show-results-to-guests"
+							checked={project.showResultsToGuests}
+							onCheckedChange={(state) => {
+								if (state !== project.showResultsToGuests) {
+									updateVisibility.mutate({
+										token: project.token,
+										showResultsToGuests: state,
+									});
+								}
+							}}
+						/>
+						{updateVisibilityPending && (
+							<Loader2 size={18} className="animate-spin" />
+						)}
+					</div>
 				</div>
 
 				{results.allowed ? (
