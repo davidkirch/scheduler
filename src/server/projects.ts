@@ -4,17 +4,8 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, eq, or } from "drizzle-orm";
 import z from "zod";
 import { client, db } from "@/db";
-import { projects, usersTable, votes } from "@/db/schema";
+import { projects, votes } from "@/db/schema";
 import { auth } from "@/lib/auth";
-
-export const getUser = createServerFn({ method: "GET" }).handler(async () => {
-	return await db.select().from(usersTable);
-});
-
-export const usersQuery = queryOptions({
-	queryKey: ["users"],
-	queryFn: () => getUser(),
-});
 
 export const listProjects = createServerFn({ method: "GET" }).handler(
 	async () => {
@@ -81,14 +72,21 @@ export const deleteProjectMutation = {
 	mutationFn: (token: string) => deleteProject({ data: { token } }),
 };
 
-export const createProjectInput = z.object({
-	name: z.string().min(1).max(255),
-	minTime: z.number().int().min(0).max(23).default(8),
-	maxTime: z.number().int().min(0).max(23).default(22),
-	hourlyChunks: z.number().int().positive().default(1),
-	dates: z.array(z.coerce.date()).min(1),
-	showResultsToGuests: z.boolean().default(false),
-});
+export const createProjectInput = z
+	.object({
+		name: z.string().min(1).max(255),
+		minTime: z.number().int().min(0).max(23).default(8),
+		maxTime: z.number().int().min(0).max(23).default(22),
+		hourlyChunks: z.number().int().positive().default(1),
+		dates: z.array(z.coerce.date()).min(1),
+		showResultsToGuests: z.boolean().default(false),
+	})
+	// Each bound is in range on its own but the pair still has to make sense —
+	// minTime >= maxTime otherwise builds a grid with no rows in it.
+	.refine((v) => v.minTime < v.maxTime, {
+		error: "start time must be earlier than end time",
+		path: ["minTime"],
+	});
 createProjectInput satisfies z.ZodType<
 	Omit<typeof projects.$inferInsert, "id" | "ownerId" | "createdAt" | "token">
 >;
@@ -121,10 +119,15 @@ export const updateVisibility = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
-		return await db
+		// Both predicates matter: the token picks the row, the owner check stops
+		// someone flipping a project they merely hold a vote link for.
+		const updated = await db
 			.update(projects)
 			.set({ showResultsToGuests: data.showResultsToGuests })
-			.where(eq(projects.ownerId, user.id));
+			.where(and(eq(projects.ownerId, user.id), eq(projects.token, data.token)))
+			.returning({ token: projects.token });
+		if (updated.length === 0) throw new Error("project not found");
+		return updated[0];
 	});
 
 export const updateVisibilityMutation = {
@@ -161,8 +164,10 @@ export const isAllowedToViewVotesForProject = createServerFn({
 })
 	.inputValidator(z.object({ token: z.string().length(32) }))
 	.handler(async ({ data }) => {
+		// A logged-out visitor on the public vote page is the normal case, not an
+		// error — answer the question ("no") instead of throwing at them.
 		const user = await currentUser();
-		if (!user) throw new Error("log in first");
+		if (!user) return false;
 		const [project] = await db
 			.select()
 			.from(projects)
@@ -170,8 +175,7 @@ export const isAllowedToViewVotesForProject = createServerFn({
 			.limit(1);
 		if (!project) throw new Error("project not found");
 
-		const allowed = project.ownerId === user.id || project.showResultsToGuests;
-		return allowed;
+		return project.ownerId === user.id || project.showResultsToGuests;
 	});
 
 export const votesQuery = (token: string) =>

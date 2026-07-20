@@ -1,11 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { client } from "@/db";
+import { eq } from "drizzle-orm";
+import { client, db } from "@/db";
+import { projects } from "@/db/schema";
+import { auth } from "@/lib/auth";
 
 export const Route = createFileRoute("/api/votes/$id/stream")({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
 				const projectId = params.id;
+
+				// Same gate as getVotesForProject: this stream announces vote activity,
+				// so anyone who may not read the results may not watch them arrive.
+				const session = await auth.api.getSession({
+					headers: request.headers,
+				});
+				if (!session?.user)
+					return new Response("unauthorized", { status: 401 });
+
+				const [project] = await db
+					.select()
+					.from(projects)
+					.where(eq(projects.token, projectId))
+					.limit(1);
+				if (!project) return new Response("not found", { status: 404 });
+				if (project.ownerId !== session.user.id && !project.showResultsToGuests)
+					return new Response("forbidden", { status: 403 });
+
 				const enc = new TextEncoder();
 
 				const stream = new ReadableStream({

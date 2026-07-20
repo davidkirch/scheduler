@@ -130,8 +130,17 @@ const LoginSignUp = ({
 								<Button
 									type="button"
 									onClick={async () => {
-										await authClient.signIn.social({ provider: "github" });
-										successAction?.();
+										setError(null);
+										try {
+											await authClient.signIn.social({ provider: "github" });
+											successAction?.();
+										} catch (err) {
+											setError(
+												err instanceof Error
+													? err.message
+													: "Something went wrong.",
+											);
+										}
 									}}
 									className="w-full"
 								>
@@ -186,8 +195,17 @@ const LoginSignUp = ({
 								<Button
 									type="button"
 									onClick={async () => {
-										await authClient.signIn.social({ provider: "github" });
-										successAction?.();
+										setError(null);
+										try {
+											await authClient.signIn.social({ provider: "github" });
+											successAction?.();
+										} catch (err) {
+											setError(
+												err instanceof Error
+													? err.message
+													: "Something went wrong.",
+											);
+										}
 									}}
 									className="w-full"
 								>

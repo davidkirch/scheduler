@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeProvider } from "next-themes";
+import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
@@ -52,6 +53,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 			],
 		}),
 
+		// catch-all: anything a route doesn't handle itself lands here rather than on
+		// the framework's default error screen
+		errorComponent: ({ error }) => (
+			<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
+				<h1>something went wrong</h1>
+				<p className="text-center">{error.message}</p>
+				<a href="/">
+					<Button>back to start</Button>
+				</a>
+			</div>
+		),
+		notFoundComponent: () => (
+			<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
+				<h1>page not found</h1>
+				<a href="/">
+					<Button>back to start</Button>
+				</a>
+			</div>
+		),
 		shellComponent: RootDocument,
 	},
 );
@@ -75,17 +95,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					{children}
 					<Toaster />
 				</ThemeProvider>
-				<TanStackDevtools
-					config={{
-						position: "bottom-right",
-					}}
-					plugins={[
-						{
-							name: "Tanstack Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-					]}
-				/>
+				{import.meta.env.DEV && (
+					<TanStackDevtools
+						config={{
+							position: "bottom-right",
+						}}
+						plugins={[
+							{
+								name: "Tanstack Router",
+								render: <TanStackRouterDevtoolsPanel />,
+							},
+						]}
+					/>
+				)}
 				<Scripts />
 			</body>
 		</html>

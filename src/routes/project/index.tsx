@@ -3,13 +3,8 @@ import {
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import {
-	createFileRoute,
-	Link,
-	Navigate,
-	useNavigate,
-} from "@tanstack/react-router";
-import { CircleQuestionMark, Copy, Trash2, Vote } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Copy, Trash2, Vote } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { LabelWithTip } from "@/components/labelWithTip";
@@ -36,11 +31,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import UserBubble from "@/components/userBubble";
 import type { projects } from "@/db/schema";
 import { authClient } from "@/lib/auth-client";
@@ -104,7 +94,9 @@ function RouteComponent() {
 		setDeleting(true);
 		setDeleteError("");
 		try {
-			await deleteProject.mutate(toDelete.token);
+			// mutateAsync, not mutate — mutate returns void and never rejects, so the
+			// catch below was unreachable and a failed delete looked like a success
+			await deleteProject.mutateAsync(toDelete.token);
 			setToDelete(null);
 		} catch (e) {
 			setDeleteError(
@@ -325,7 +317,7 @@ function RouteComponent() {
 			</AlertDialog>
 		</div>
 	) : (
-		<div className="flex flex-col items-center justify-center w-full min-h-dvh bg-amber-300">
+		<div className="flex flex-col items-center justify-center w-full min-h-dvh bg-surface-page">
 			<LoginSignUp offerAnonymous offerSignIn />
 		</div>
 	);

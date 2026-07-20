@@ -3,7 +3,21 @@ import { z } from "zod";
 // Server-only. Never import this from a component or anything reachable from
 // router.tsx — it would carry the secrets into the client bundle.
 const envSchema = z.object({
-	DATABASE_URL: z.string().min(1),
+	// postgres-js accepts any URL shape and only fails on first connect, which is a
+	// confusing crash long after boot. Check the scheme up front instead.
+	DATABASE_URL: z
+		.url({ error: "must be a valid connection URL" })
+		.refine(
+			(v) => v.startsWith("postgres://") || v.startsWith("postgresql://"),
+			"must start with postgres:// or postgresql://",
+		)
+		// A composed `DATABASE_URL=postgresql://${DATABASE_USER}@...` is expanded by
+		// Vite but not by a plain dotenv loader, so the raw placeholders can survive
+		// into a URL that still parses. Catch it here rather than at connect time.
+		.refine(
+			(v) => !/\$\{\w+\}/.test(v),
+			"contains unexpanded placeholders — write the connection URL out in full",
+		),
 	BETTER_AUTH_URL: z.url(),
 	BETTER_AUTH_SECRET: z.string().min(32, "must be at least 32 characters"),
 	GITHUB_CLIENT_ID: z.string().min(1).optional(),

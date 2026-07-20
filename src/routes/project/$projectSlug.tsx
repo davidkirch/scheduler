@@ -19,10 +19,13 @@ import {
 
 export const Route = createFileRoute("/project/$projectSlug")({
 	ssr: false,
-	loader: async ({ params, context }) => {
-		context.queryClient.ensureQueryData(getProjectQuery(params.projectSlug));
-		context.queryClient.ensureQueryData(votesQuery(params.projectSlug));
-	},
+	loader: ({ params, context }) =>
+		// awaited, so a rejection reaches errorComponent below instead of surfacing
+		// as an unhandled rejection
+		Promise.all([
+			context.queryClient.ensureQueryData(getProjectQuery(params.projectSlug)),
+			context.queryClient.ensureQueryData(votesQuery(params.projectSlug)),
+		]),
 	errorComponent: ({ error }) => (
 		<>
 			<div className="flex flex-col w-full items-center justify-center p-8 gap-8">
@@ -69,6 +72,14 @@ function RouteComponent() {
 		}
 	};
 
+	// a toggle in flight when the user navigates away would otherwise fire setState
+	// on an unmounted component
+	useEffect(() => {
+		return () => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+		};
+	}, []);
+
 	const updateVisibility = useMutation({
 		...updateVisibilityMutation,
 		onMutate: () => {
@@ -80,9 +91,11 @@ function RouteComponent() {
 			}),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries(getProjectQuery(projectSlug));
-			cancelTimer();
 			toast.success("updated visibility", { position: "top-center" });
+		},
+		onSettled: () => {
 			setUpdateVisibilityPending(false);
+			cancelTimer();
 		},
 	});
 

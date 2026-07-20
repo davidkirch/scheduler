@@ -42,10 +42,34 @@ test("treats an empty value as missing, not as a valid string", async () => {
 	);
 });
 
-test("rejects a half-configured GitHub provider", async () => {
+test("rejects a DATABASE_URL that is not a connection URL", async () => {
 	await expect(
-		loadEnv({ ...valid, GITHUB_CLIENT_ID: "abc" }),
-	).rejects.toThrow(/must be set together/);
+		loadEnv({ ...valid, DATABASE_URL: "localhost:5432/scheduler" }),
+	).rejects.toThrow(/DATABASE_URL/);
+});
+
+test("rejects a DATABASE_URL with a non-postgres scheme", async () => {
+	await expect(
+		loadEnv({ ...valid, DATABASE_URL: "mysql://user:pass@localhost:3306/db" }),
+	).rejects.toThrow(/postgres/);
+});
+
+// biome-ignore lint/suspicious/noTemplateCurlyInString: the unexpanded literal is the point
+const UNEXPANDED_URL = "postgresql://${DATABASE_USER}@${DATABASE_HOST}:5432/db";
+
+// The .env.example composes DATABASE_URL from its parts. Vite expands those
+// references, a plain dotenv loader does not — so the unexpanded literal must not
+// slip through as "valid" and fail later at connect time.
+test("rejects an unexpanded placeholder URL", async () => {
+	await expect(
+		loadEnv({ ...valid, DATABASE_URL: UNEXPANDED_URL }),
+	).rejects.toThrow(/DATABASE_URL/);
+});
+
+test("rejects a half-configured GitHub provider", async () => {
+	await expect(loadEnv({ ...valid, GITHUB_CLIENT_ID: "abc" })).rejects.toThrow(
+		/must be set together/,
+	);
 });
 
 test("accepts both GitHub credentials together", async () => {

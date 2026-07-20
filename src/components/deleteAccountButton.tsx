@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import {
 	AlertDialog,
@@ -25,10 +26,22 @@ const DeteleAccountButton = ({
 	const isAnonymous = session?.user.isAnonymous === true;
 
 	async function handleDelete() {
-		if (isAnonymous) {
-			await authClient.deleteAnonymousUser();
-		} else {
-			await authClient.deleteUser();
+		try {
+			if (isAnonymous) {
+				await authClient.deleteAnonymousUser();
+			} else {
+				await authClient.deleteUser();
+			}
+		} catch (err) {
+			// Never redirect on failure — that told the user their data was gone
+			// while it was still in the database.
+			toast.error(
+				err instanceof Error
+					? `could not delete account: ${err.message}`
+					: "could not delete account",
+				{ position: "top-center" },
+			);
+			return;
 		}
 		setConfirmationOpen(false);
 		window.location.href = "/";

@@ -1,186 +1,116 @@
 # Pre-release audit — scheduler
 
-Scope: full repo scan of error paths, data security, and deployment maturity, with an eye
-toward shipping this as a self-hostable open-source service.
-
-Verdict: the data model and authorization logic are in decent shape. What blocks release is
-a **missing auth secret**, one **data-loss bug**, and a systemic pattern of **silently
-swallowed errors** in the UI. Self-hostability is currently near zero — there is no
-container, no license, and the deployment URL is compiled into the bundle.
+Third pass. All P0 and P1 code issues are now fixed and verified. **Everything remaining is
+P2 (packaging / self-hosting), untouched by request.**
 
 ---
 
-## P0 — blocks deployment
+## Fixed in this pass
 
-### 1. `BETTER_AUTH_SECRET` is not set
+### Data-integrity and privacy
 
-`.env` and `.env.example` define `DATABASE_URL`, the GitHub OAuth pair, and the Vite URL
-vars — but no `BETTER_AUTH_SECRET`. `src/lib/auth.ts:8` never passes `secret` either.
+- **`updateVisibility` rewrote every project** (`server/projects.ts`) — the validated `token`
+  was never used in the `WHERE`, so one toggle flipped `showResultsToGuests` across all of a
+  user's projects. Now filters on `token` *and* `ownerId`, returns the affected row, and
+  throws `project not found` instead of silently matching nothing.
+- **Anonymous-link vote loss** (`lib/auth.ts`) — the `EXISTS` subquery was uncorrelated, so it
+  was true whenever the votes table had any row, deleting *all* of a user's anonymous votes on
+  every account upgrade. Now correlated via `alias(votes, "kept")`. Verified against the
+  generated SQL:
+  ```sql
+  delete from "votes" where ("votes"."voter_id" = $1 and exists (
+    select 1 from "votes" "kept"
+    where ("kept"."project_id" = "votes"."project_id" and "kept"."voter_id" = $2)))
+  ```
+- **Account deletion silently failed** — `votes.voter_id` was `ON DELETE no action`, so anyone
+  who had voted could not be deleted. Now `cascade` (migration `0009`, applied). The button
+  also ignored the result and redirected regardless; it now surfaces the failure and stays put.
 
-better-auth uses that secret to sign session tokens. Without it you get a development
-fallback, which means session cookies are forgeable and every self-hoster who copies your
-`.env.example` inherits the same one. That is a full authentication bypass.
+### Error handling
 
-Fix: add `secret: process.env.BETTER_AUTH_SECRET` to the config, add the key to
-`.env.example`, and make the server refuse to boot without it in production.
+- `authClient` now sets `fetchOptions: { throw: true }`. better-fetch resolves `{ data, error }`
+  by default, which made every `try/catch` around an auth call dead code and let a failed
+  sign-in look identical to a success. The existing handlers in `logInSignUp.tsx` now actually
+  fire; the two bare GitHub buttons, `signOut`, and `deleteUser` gained handling to match.
+- `deleteProject.mutate` → `mutateAsync` — `mutate` returns `void` and never rejects, so the
+  `catch` was unreachable and a failed delete looked successful.
+- `submitVote` and the `getMyVote` prefill now handle rejection instead of dropping it.
+- `isAllowedToViewVotesForProject` returned `throw "log in first"` for logged-out visitors —
+  the normal case on the public vote page, so it threw on essentially every fresh visit. Now
+  returns `false`.
+- Visibility spinner teardown moved to `onSettled`; on error it used to spin forever. Timer is
+  also cleared on unmount.
+- `$projectSlug` loader now returns `Promise.all([...])` so rejections reach its
+  `errorComponent` instead of surfacing as unhandled rejections.
+- Added an `errorComponent` to the public vote route and `errorComponent` +
+  `notFoundComponent` to `__root`.
 
-### 2. Account deletion is broken *and* reports success
+### Security
 
-Three defects stack on the same path:
+- **SSE stream is now authenticated** (`api/votes.$id.stream.ts`) — was fully open. Applies the
+  same gate as `getVotesForProject`: 401 unauthenticated, 404 unknown token, 403 not permitted.
+  Verified: unauthenticated request returns 401.
+- **Rate limiting enabled** in better-auth (60s window, 20 requests). Marked `ponytail:` —
+  in-memory, so counters reset on restart and don't span replicas; move to the database store
+  if you scale out.
+- **Devtools no longer ship to production** — wrapped in `import.meta.env.DEV`.
+- Removed `getUser` / `usersQuery`, an unauthenticated server function that dumped the whole
+  demo `users` table.
 
-- `src/db/schema.ts:51` — `votes.voterId` references `user.id` with no `onDelete` rule.
-  Migration `drizzle/0002_cute_the_call.sql:22` confirms `ON DELETE no action`. Any user who
-  has ever voted cannot be deleted; Postgres raises a foreign-key violation.
-- `src/components/deleteAccountButton.tsx:84-87` — the confirmation dialog promises "votes
-  you cast on other people's projects go too." The schema cannot honor that.
-- `src/components/deleteAccountButton.tsx:27-35` — `handleDelete` ignores the return value
-  and unconditionally redirects to `/`. better-auth's client returns `{ data, error }`
-  rather than throwing, so a failed deletion looks identical to a successful one.
+### Your three specific asks
 
-This is a GDPR-relevant path: the user is told their data is gone, and it is not.
+- **`usersTable` removed** from `schema.ts`, and the leftover table dropped from the database.
+- **`DATABASE_URL` validated** in `env.ts`: must parse as a URL, must use a `postgres://` or
+  `postgresql://` scheme, and must not contain unexpanded `${...}` placeholders.
+- **min/max time validation** — `createProjectInput` gained a `.refine()` requiring
+  `minTime < maxTime`. Both bounds passed the 0–23 range check independently, so an inverted or
+  equal pair was accepted and produced an empty grid. The `TODO` in `schema.ts` is resolved.
 
-Fix: `onDelete: "cascade"` on `votes.voterId` (+ migration), then check the `error` field
-before redirecting.
+### Database
 
-### 3. Anonymous-account linking deletes votes it should keep
+Migrations had **never been applied** — `drizzle.__drizzle_migrations` was empty and the schema
+had been built with `drizzle-kit push`. Baselined `0000`–`0008` as already-applied, then ran
+`drizzle-kit migrate` so only `0009` executed. Verified after: FK `confdeltype = 'c'`,
+10 migrations recorded, data intact (8 projects, 7 votes, 17 accounts).
 
-`src/lib/auth.ts:36-46`:
+Also fixed `drizzle.config.ts`: Vite expands `${VAR}` references in `.env` but the bare
+`dotenv/config` loader used by drizzle-kit does not, so `DATABASE_URL` arrived as a literal
+`postgresql://${DATABASE_USER}:...` and could not connect. Expanded inline rather than adding
+`dotenv-expand` for four lines.
 
-```ts
-await tx.delete(votes).where(
-  and(
-    eq(votes.voterId, from),
-    exists(tx.select().from(votes).as("v")),  // ← no correlation predicate
-  ),
-);
-```
+### Verification
 
-The `exists` subquery is an uncorrelated `SELECT * FROM votes`. It is true whenever the
-votes table contains *any* row. The trailing comment describes the intended predicate
-(`v.project_id = votes.project_id AND v.voter_id = to`) but the code does not implement it.
+`tsc --noEmit` clean · biome clean on changed files · 13 tests pass (9 env, 4 project input) ·
+dev server boots, `/` and `/api/auth/get-session` return 200 · SSE returns 401 unauthenticated.
 
-Effect: every time an anonymous user upgrades to a real account, **all** of their anonymous
-votes are deleted, not just the ones that would collide — and then the `update` on line 48
-finds nothing to reassign. Silent, unrecoverable vote loss on a routine path.
-
-Fix: correlate the subquery against the outer row, or sidestep it entirely — reassign with
-`onConflictDoNothing` and delete the leftovers afterward.
-
----
-
-## P1 — fix before inviting users
-
-### 4. Errors in the UI are swallowed
-
-A consistent pattern, not isolated slips:
-
-| Location | Problem |
-|---|---|
-| `src/routes/project/index.tsx:97` | `await deleteProject.mutate(...)` — react-query's `mutate` returns `void` and never throws. The surrounding `try/catch` is dead code; the `catch` can never run, and `setToDelete(null)` fires on failure. Use `mutateAsync`. |
-| `src/routes/project/$projectSlug_.vote.tsx:57-64` | `submitVote` is awaited with no `try/catch`. A failure rejects unhandled, the success toast never fires, and the user gets no feedback on the app's primary action. |
-| `src/routes/project/$projectSlug_.vote.tsx:31` | `getMyVote(...).then(...)` with no `.catch` — unhandled rejection. |
-| `src/components/logInSignUp.tsx:69,100,151` | Same shape as #2: better-auth client calls resolve with `{ error }` instead of throwing, so these `try/catch` blocks never fire and `successAction?.()` runs even on a wrong password. **Worth confirming by hand** — sign in with a bad password and watch what the form does. |
-
-### 5. The public vote route has no error boundary
-
-`$projectSlug.tsx:15` has an `errorComponent`. `$projectSlug_.vote.tsx` — the page you send
-to everyone you're scheduling with — has none, and neither does `__root.tsx`. Its loader
-throws a bare `Error("project not found")` for any bad token, so a mistyped link renders
-TanStack's fallback error screen instead of anything useful.
-
-Add an `errorComponent` to the vote route and a catch-all on the root.
-
-### 6. Loader promises are not awaited
-
-`$projectSlug.tsx:11-14` calls `ensureQueryData` twice without `await` or `return`. The
-loader resolves immediately; `useSuspenseQuery` in the component papers over it, but a
-rejection surfaces as an unhandled rejection rather than routing to the `errorComponent`
-defined directly below it. Return `Promise.all([...])`.
-
-### 7. The SSE stream is unauthenticated
-
-`src/routes/api/votes.$id.stream.ts` performs no session check. Anyone can open a stream for
-any project token and observe vote activity in real time. The payload is only `changed`, so
-this leaks timing rather than content — but it is also an unauthenticated, unbounded,
-long-lived connection endpoint, which is a cheap resource-exhaustion target on a
-self-hosted box.
-
-Gate it on the same check `getVotesForProject` already does, and cap concurrent streams.
-
-### 8. Devtools ship to production
-
-`__root.tsx:78-88` mounts `TanStackDevtools` unconditionally. Wrap in
-`import.meta.env.DEV`.
-
-### 9. No rate limiting
-
-Nothing throttles login, signup, project creation, or voting. better-auth has built-in rate
-limiting — turn it on explicitly, and be aware that anonymous sign-in lets an attacker mint
-unlimited user rows.
+New tests cover the two validations you asked for, including the unexpanded-`${...}` case —
+which caught a real gap: that form parses as a valid URL, so the scheme check alone missed it.
 
 ---
 
-## P2 — self-hosting readiness
+## Remaining — all P2, deliberately not touched
 
-This is the weakest area. Right now nobody else can realistically run this.
+- **No `LICENSE`.** The code is legally all-rights-reserved until you add one; pick before
+  publishing (MIT vs AGPL depending on whether you mind a hosted competitor).
+- **No `Dockerfile` / `docker-compose.yml`.** `docker compose up` with app + Postgres is the
+  expected entry point. Your `.env.example` already splits the DB vars for this.
+- **No migration-on-boot, no health-check endpoint, no CI** (`.github/` absent) despite biome
+  and vitest being wired up.
+- **Test coverage is thin** — env and project-input validation only. `tallyVotes` and the
+  anon-link transaction are still uncovered; the latter is where the worst bug lived.
+- **Branding is still the starter:** `package.json` name `starter-for-tanstack`, page title
+  `"Appwrite + TanStack Start"`, favicon `/appwrite.svg`, unmodified README, Appwrite notes in
+  `docs/`.
+- **Dead dependencies:** `@appwrite.io/pink-icons`, `shadcn`, `biome` (wrong package — you use
+  `@biomejs/biome`), `pg` alongside `postgres`, `styled-components`. The `types` script still
+  shells out to the Appwrite CLI.
+- **Google Fonts loaded from CDN** while `@fontsource-variable/geist` sits installed and
+  unused — an avoidable external dependency and a GDPR liability for an EU-facing self-hosted
+  tool.
 
-- **No `LICENSE`.** Without one the code is legally all-rights-reserved and technically not
-  open source. Pick one before publishing — MIT or AGPL depending on whether you mind
-  someone running a hosted competitor.
-- **The deploy URL is baked into the build.** `$projectSlug.tsx:46` builds share links from
-  `import.meta.env.VITE_PROTOCOL` / `VITE_BASE_URL`. Vite inlines these at *build* time, so
-  a self-hoster cannot configure their domain — they must rebuild the image. This is the
-  single biggest self-hosting blocker. Derive the origin from the incoming request, or read
-  it from a server-side runtime env var.
-- **No `Dockerfile` / `docker-compose.yml`.** The expected deliverable for a self-hosted
-  service is `docker compose up` with app + Postgres. Add both.
-- **No migration step on boot.** Document or automate `drizzle-kit migrate` — otherwise
-  first run hits an empty database.
-- **No health-check endpoint** for container orchestration.
-- **No CI.** No `.github/workflows`. You have `biome` and `vitest` wired up but nothing runs
-  them.
-- **No tests at all.** Zero `*.test.ts` files despite vitest being configured. At minimum
-  cover `tallyVotes` and the anon-linking transaction from #3 — that bug would have been
-  caught by one test.
-- **README is the unmodified TanStack starter.** Also: `package.json` name is
-  `starter-for-tanstack`, the page title is `"Appwrite + TanStack Start"`, the favicon points
-  at `/appwrite.svg`, and `docs/` still holds Appwrite integration notes. Leftover
-  scaffolding from a stack you no longer use.
-- **Dead dependencies.** `@appwrite.io/pink-icons`, `shadcn` and `biome` (the wrong package —
-  you correctly use `@biomejs/biome` in devDependencies), `pg` alongside `postgres`,
-  `styled-components`. The `types` script still shells out to the Appwrite CLI.
-- **Google Fonts is loaded from the CDN** (`__root.tsx:43-46`) while `@fontsource-variable/geist`
-  sits installed and unused. For a self-hosted, EU-facing tool this is both an avoidable
-  external dependency and a GDPR complaint waiting to happen. Serve fonts locally.
+### Worth knowing before self-hosting
 
----
-
-## Also worth knowing
-
-- **`getUser` is an unauthenticated table dump.** `src/server/projects.ts:10-12` selects every
-  row of `usersTable` with no session check, exposed as a callable server function. It appears
-  unused by any component — but it is still a live endpoint. The table itself
-  (`schema.ts:14-19`, with `name`/`age`/`email`) looks like leftover demo scaffolding
-  unrelated to the better-auth `user` table. Delete both.
-- **Token entropy is fine.** `crypto.randomUUID().slice(0, 32)` (`projects.ts:101`) keeps
-  ~106 bits. Not a weakness — but note these tokens are the *only* thing protecting a
-  project, so keep them out of logs and referrer headers.
-- **`showResultsToGuests` semantics.** `getProject` (`projects.ts:40-43`) lets any
-  authenticated user read a project with that flag set. That looks intentional; just be
-  clear in the UI that "guests" means anyone with the link, not a curated list.
-- **`minTime` / `maxTime` are unvalidated relative to each other.** The `TODO` at
-  `schema.ts:30` is real: `createProjectInput` bounds each to 0–23 independently, so
-  `minTime > maxTime` is accepted and produces an empty grid.
-
----
-
-## Suggested order
-
-1. `BETTER_AUTH_SECRET` — one line, closes an auth bypass.
-2. The `exists` bug in `auth.ts` — actively destroying data.
-3. Vote FK cascade + honest delete-account feedback.
-4. Sweep the swallowed-error pattern (#4) and add the missing error boundaries (#5).
-5. Auth the SSE endpoint, hide devtools, enable rate limiting.
-6. Then self-hosting: license, runtime-configurable URL, Dockerfile, README rewrite, CI.
-
-Items 1–3 are small, surgical diffs. The self-hosting work in step 6 is the larger project.
+The fresh-install path is now **untested**: because this database was baselined rather than
+migrated from scratch, nobody has verified that `0000`–`0009` apply cleanly to an empty
+database. Do that against a throwaway Postgres before publishing — it is the exact path every
+self-hoster will take.

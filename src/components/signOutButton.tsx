@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import DeleteAccountButton from "./deleteAccountButton";
 import LoginSignUp from "./logInSignUp";
@@ -18,15 +19,22 @@ const SignOutButton = () => {
 
 	const [claimOpen, setClaimOpen] = useState(false);
 
-	function handleSignOut() {
+	async function handleSignOut() {
 		if (isAnonymous) {
 			setClaimOpen(true);
-		} else {
-			authClient.signOut();
+			return;
+		}
+		try {
+			await authClient.signOut();
+		} catch (err) {
+			toast.error(
+				err instanceof Error
+					? `could not sign out: ${err.message}`
+					: "could not sign out",
+				{ position: "top-center" },
+			);
 		}
 	}
-
-	console.log("anon", isAnonymous);
 	return (
 		<>
 			<Button onClick={handleSignOut}>sign out</Button>

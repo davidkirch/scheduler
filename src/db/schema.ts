@@ -11,13 +11,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
-export const usersTable = pgTable("users", {
-	id: integer().primaryKey().generatedAlwaysAsIdentity(),
-	name: varchar({ length: 255 }).notNull(),
-	age: integer().notNull(),
-	email: varchar({ length: 255 }).notNull().unique(),
-});
-
 export const projects = pgTable(
 	"projects",
 	{
@@ -27,7 +20,8 @@ export const projects = pgTable(
 		ownerId: text("owner_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		minTime: smallint().notNull().default(8), //TODO: add min max validation
+		// range is enforced in createProjectInput (0-23, min < max)
+		minTime: smallint().notNull().default(8),
 		maxTime: smallint().notNull().default(22),
 		hourlyChunks: smallint().notNull().default(1),
 		dates: timestamp("dates", { withTimezone: true }).notNull().array(),
@@ -46,9 +40,11 @@ export const votes = pgTable(
 		projectId: integer("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
+		// cascade: deleting an account must take the votes it cast with it, otherwise
+		// better-auth's deleteUser hits a FK violation for anyone who has ever voted.
 		voterId: text("voter_id")
 			.notNull()
-			.references(() => user.id),
+			.references(() => user.id, { onDelete: "cascade" }),
 		voterName: text("voter_name").notNull(),
 		slots: timestamp("slots", { withTimezone: true }).array().notNull(),
 	},
