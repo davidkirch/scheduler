@@ -1,11 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { anonymous } from "better-auth/plugins";
-import { and, eq, exists, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { projects, votes } from "@/db/schema";
 import { env } from "@/env";
+import { planAnonymousVoteLink } from "@/lib/anonymous-linking";
 
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET,
@@ -41,33 +41,26 @@ export const auth = betterAuth({
 						.set({ ownerId: to })
 						.where(eq(projects.ownerId, from));
 
-					// votes has unique(project_id, voter_id): if both identities voted on the
-					// same project, the reassign collides. Drop the anon vote, keep the real one.
-					// The subquery MUST be correlated against the outer row — an uncorrelated
-					// EXISTS is true whenever the table has any row at all, which would delete
-					// every anonymous vote rather than only the colliding ones.
-					const kept = alias(votes, "kept");
-					await tx.delete(votes).where(
-						and(
-							eq(votes.voterId, from),
-							exists(
-								tx
-									.select({ one: sql`1` })
-									.from(kept)
-									.where(
-										and(
-											eq(kept.projectId, votes.projectId),
-											eq(kept.voterId, to),
-										),
-									),
-							),
-						),
-					);
+					const linkableVotes = await tx
+						.select({
+							id: votes.id,
+							projectId: votes.projectId,
+							voterId: votes.voterId,
+						})
+						.from(votes)
+						.where(inArray(votes.voterId, [from, to]));
+					const plan = planAnonymousVoteLink(linkableVotes, from, to);
 
-					await tx
-						.update(votes)
-						.set({ voterId: to, voterName: newUser.user.name })
-						.where(eq(votes.voterId, from));
+					if (plan.deleteVoteIds.length > 0) {
+						await tx.delete(votes).where(inArray(votes.id, plan.deleteVoteIds));
+					}
+
+					if (plan.updateVoteIds.length > 0) {
+						await tx
+							.update(votes)
+							.set({ voterId: to, voterName: newUser.user.name })
+							.where(inArray(votes.id, plan.updateVoteIds));
+					}
 				});
 			},
 		}),

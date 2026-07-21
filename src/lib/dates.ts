@@ -1,8 +1,8 @@
 const MS_PER_DAY = 86_400_000;
 
 // Group selected dates into runs of consecutive calendar days. Each run becomes one
-// schedule-selector block (startDate + numDays), so gaps in the picked dates render as
-// separate blocks rather than a stretch of empty columns. Round() absorbs DST ±1h.
+// grid block, so gaps in the picked dates render as separate blocks rather than a
+// stretch of empty columns. Round() absorbs DST ±1h.
 export function contiguousRuns(dates: Date[]): Date[][] {
 	if (dates.length === 0) return [];
 	const sorted = dates

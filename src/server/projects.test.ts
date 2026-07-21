@@ -170,6 +170,42 @@ test("rejects duplicate vote slots", async () => {
 	expect(() => validateVoteSlots(project(), [slot, slot])).toThrow(/duplicate/);
 });
 
+test("rejects more vote slots than the project grid can contain", async () => {
+	const { validateVoteSlots } = await projectsModule();
+	const p = project({
+		minTime: 9,
+		maxTime: 10,
+		hourlyChunks: 1,
+		dates: [new Date(2026, 7, 1)],
+	});
+
+	expect(() =>
+		validateVoteSlots(p, [
+			new Date(2026, 7, 1, 9),
+			new Date(2026, 7, 1, 9, 30),
+		]),
+	).toThrow(/more slots/);
+});
+
+test("rejects vote slots with second or millisecond precision", async () => {
+	const { validateVoteSlots } = await projectsModule();
+
+	expect(() =>
+		validateVoteSlots(project(), [new Date(2026, 7, 1, 9, 0, 1)]),
+	).toThrow(/aligned/);
+	expect(() =>
+		validateVoteSlots(project(), [new Date(2026, 7, 1, 9, 0, 0, 1)]),
+	).toThrow(/aligned/);
+});
+
+test("rejects projects with unsupported stored granularity before validating slots", async () => {
+	const { validateVoteSlots } = await projectsModule();
+
+	expect(() =>
+		validateVoteSlots(project({ hourlyChunks: 3 }), [new Date(2026, 7, 1, 9)]),
+	).toThrow(/unsupported/);
+});
+
 test("bounds submitted vote payload size before project lookup", async () => {
 	const { MAX_VOTE_SLOTS, submitVoteInput } = await projectsModule();
 	const result = submitVoteInput.safeParse({
