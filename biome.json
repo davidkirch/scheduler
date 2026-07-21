@@ -13,6 +13,10 @@
 			"**/index.html",
 			"**/vite.config.js",
 			"!**/src/routeTree.gen.ts",
+			"!**/src/scheduler.js",
+			"!**/src/scheduler.d.ts",
+			"!**/src/scheduler.variants.d.ts",
+			"!**/src/theme.css",
 			"!**/src/styles.css"
 		]
 	},

@@ -17,8 +17,6 @@ export const Route = createFileRoute("/project/$projectSlug_/vote")({
 	ssr: false,
 	loader: ({ params }) =>
 		getProjectForVote({ data: { token: params.projectSlug } }),
-	// this is the link that gets shared around, so a stale or mistyped token has to
-	// land somewhere better than the framework's fallback error screen
 	errorComponent: () => (
 		<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
 			<h1>this link doesn't work</h1>
@@ -42,8 +40,6 @@ function RouteComponent() {
 	const [showResultsButton, setShowResultsButton] = useState(false);
 	const showToast = useToast();
 
-	// Prefill with this user's earlier vote once a session exists. A fresh guest has
-	// nothing to load, so the grid just stays empty.
 	useEffect(() => {
 		if (!user) return;
 		getMyVote({ data: { token: project.token } })
@@ -51,7 +47,6 @@ function RouteComponent() {
 				if (vote?.slots) setSchedule(vote.slots.map((s) => new Date(s)));
 			})
 			.catch(() => {
-				// prefill is a convenience — an empty grid is a fine fallback
 				showToast({
 					body: "could not load your previous vote",
 					type: "error",
@@ -67,13 +62,10 @@ function RouteComponent() {
 				}),
 			);
 		} catch {
-			// hiding the results button is the safe fallback
 			setShowResultsButton(false);
 		}
 	}, [project.token]);
 
-	// re-runs when the user signs in on this page, which is the point at which the
-	// answer can actually change
 	useEffect(() => {
 		if (!user) {
 			setShowResultsButton(false);
@@ -95,7 +87,6 @@ function RouteComponent() {
 				<div inert={locked} className={locked ? "opacity-50" : undefined}>
 					<ScheduleGrid
 						project={project}
-						// Reserve the save button + the page's gap and bottom padding.
 						bottomAllowance={104}
 						selection={schedule}
 						onChange={setSchedule}
@@ -111,7 +102,6 @@ function RouteComponent() {
 										data: { token: project.token, slots: schedule },
 									});
 								} catch (err) {
-									// silently dropping this lost the user's whole selection
 									showToast({
 										body:
 											err instanceof Error

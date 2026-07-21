@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeProvider, useTheme } from "next-themes";
-import { schedulerTheme } from "@/theme";
+import { schedulerTheme } from "@/scheduler";
 
 import appCss from "../styles.css?url";
 
