@@ -1,1 +1,0 @@
-ALTER TABLE "votes" ALTER COLUMN "project_id" SET DATA TYPE integer;

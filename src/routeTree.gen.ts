@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectIndexRouteImport } from './routes/project/index'
-import { Route as ProjectVoteRouteImport } from './routes/project/vote'
 import { Route as ProjectProjectSlugRouteImport } from './routes/project/$projectSlug'
-import { Route as ProjectProjectSlugVoteRouteImport } from './routes/project/$projectSlug_.vote'
+import { Route as ProjectVoteRouteImport } from './routes/project/vote'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ProjectProjectSlugVoteRouteImport } from './routes/project/$projectSlug_.vote'
 import { Route as ApiVotesIdStreamRouteImport } from './routes/api/votes.$id.stream'
 
 const IndexRoute = IndexRouteImport.update({
@@ -27,24 +27,24 @@ const ProjectIndexRoute = ProjectIndexRouteImport.update({
   path: '/project/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectVoteRoute = ProjectVoteRouteImport.update({
-  id: '/project/vote',
-  path: '/project/vote',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProjectProjectSlugRoute = ProjectProjectSlugRouteImport.update({
   id: '/project/$projectSlug',
   path: '/project/$projectSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectProjectSlugVoteRoute = ProjectProjectSlugVoteRouteImport.update({
-  id: '/project/$projectSlug_/vote',
-  path: '/project/$projectSlug/vote',
+const ProjectVoteRoute = ProjectVoteRouteImport.update({
+  id: '/project/vote',
+  path: '/project/vote',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectProjectSlugVoteRoute = ProjectProjectSlugVoteRouteImport.update({
+  id: '/project/$projectSlug_/vote',
+  path: '/project/$projectSlug/vote',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVotesIdStreamRoute = ApiVotesIdStreamRouteImport.update({
@@ -57,7 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/project/$projectSlug': typeof ProjectProjectSlugRoute
   '/project/vote': typeof ProjectVoteRoute
-  '/project': typeof ProjectIndexRoute
+  '/project/': typeof ProjectIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/project/$projectSlug/vote': typeof ProjectProjectSlugVoteRoute
   '/api/votes/$id/stream': typeof ApiVotesIdStreamRoute
@@ -87,7 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/project/$projectSlug'
     | '/project/vote'
-    | '/project'
+    | '/project/'
     | '/api/auth/$'
     | '/project/$projectSlug/vote'
     | '/api/votes/$id/stream'
@@ -133,15 +133,8 @@ declare module '@tanstack/react-router' {
     '/project/': {
       id: '/project/'
       path: '/project'
-      fullPath: '/project'
+      fullPath: '/project/'
       preLoaderRoute: typeof ProjectIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/project/vote': {
-      id: '/project/vote'
-      path: '/project/vote'
-      fullPath: '/project/vote'
-      preLoaderRoute: typeof ProjectVoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/project/$projectSlug': {
@@ -151,11 +144,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/project/$projectSlug_/vote': {
-      id: '/project/$projectSlug_/vote'
-      path: '/project/$projectSlug/vote'
-      fullPath: '/project/$projectSlug/vote'
-      preLoaderRoute: typeof ProjectProjectSlugVoteRouteImport
+    '/project/vote': {
+      id: '/project/vote'
+      path: '/project/vote'
+      fullPath: '/project/vote'
+      preLoaderRoute: typeof ProjectVoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -163,6 +156,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project/$projectSlug_/vote': {
+      id: '/project/$projectSlug_/vote'
+      path: '/project/$projectSlug/vote'
+      fullPath: '/project/$projectSlug/vote'
+      preLoaderRoute: typeof ProjectProjectSlugVoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/votes/$id/stream': {

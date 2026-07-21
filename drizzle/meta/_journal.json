@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1784287507379,
-      "tag": "0000_clumsy_greymalkin",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1784289859332,
-      "tag": "0001_unknown_roughhouse",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1784291155700,
-      "tag": "0002_cute_the_call",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1784291204952,
-      "tag": "0003_fuzzy_betty_brant",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1784291311111,
-      "tag": "0004_lean_slyde",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1784378785226,
-      "tag": "0005_magenta_argent",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1784378881725,
-      "tag": "0006_brainy_mindworm",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1784378922867,
-      "tag": "0007_soft_exodus",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1784551144353,
-      "tag": "0008_productive_patch",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1784551544824,
-      "tag": "0009_cold_the_renegades",
+      "when": 1784625735937,
+      "tag": "0000_parallel_groot",
       "breakpoints": true
     }
   ]

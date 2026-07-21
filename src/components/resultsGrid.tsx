@@ -55,7 +55,6 @@ export default function ResultsGrid({
 					project={project}
 					// Nothing sits below the grid here — just the page's own bottom padding.
 					bottomAllowance={32}
-					// Hands touch-scrolling back to the page — see .results-grid in styles.css.
 					className="results-grid"
 					renderDateCell={(time) => {
 						const iso = time.toISOString();
