@@ -1,20 +1,9 @@
+import { Button } from "@astryxdesign/core/Button";
+import { Popover } from "@astryxdesign/core/Popover";
+import { Selector } from "@astryxdesign/core/Selector";
 import Avatar from "boring-avatars";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { useSession } from "@/lib/auth-client";
 import DeleteAccountButton from "./deleteAccountButton";
 import SignOutButton from "./signOutButton";
@@ -32,37 +21,49 @@ const UserBubble = () => {
 	const [mounted, setMounted] = useState(false);
 	useEffect(() => {
 		setMounted(true);
-		console.log(themes);
-	});
+	}, []);
 
 	return (
 		<>
 			{session !== null && (
-				<Popover>
-					<PopoverTrigger
-						render={
-							<Button
-								variant="outline"
-								className="w-fit p-1 h-fit justify-start"
-							>
-								<AvatarName name={session.user.name} />
-							</Button>
-						}
-					/>
-					<PopoverContent className="w-fit" align="start">
-						<AvatarName name={session.user.name} />
+				<Popover
+					label="User menu"
+					alignment="start"
+					width="fit-content"
+					content={
+						<div className="flex w-fit flex-col gap-2 text-sm">
+							<AvatarName name={session.user.name} />
 
-						{mounted && (
-							<ThemeSelect theme={theme} themes={themes} setTheme={setTheme} />
-						)}
+							{mounted && (
+								<ThemeSelect
+									theme={theme}
+									themes={themes}
+									setTheme={setTheme}
+								/>
+							)}
 
-						<p className="text-muted-foreground">{session?.user.email}</p>
+							<p className="text-muted-foreground">{session?.user.email}</p>
 
-						<div className="flex flex-row justify-between items-center gap-2">
-							<SignOutButton />
-							<DeleteAccountButton withConfirmation />
+							<div className="flex flex-row justify-between items-center gap-2">
+								<SignOutButton />
+								<DeleteAccountButton withConfirmation />
+							</div>
 						</div>
-					</PopoverContent>
+					}
+				>
+					<Button
+						label={session.user.name}
+						variant="secondary"
+						className="w-fit p-1 h-fit justify-start"
+						style={{
+							backgroundColor: "var(--surface-page)",
+							border: "2px solid var(--primary)",
+							borderRadius: 0,
+							color: "var(--foreground)",
+						}}
+					>
+						<AvatarName name={session.user.name} />
+					</Button>
 				</Popover>
 			)}
 		</>
@@ -79,26 +80,18 @@ function ThemeSelect({
 	setTheme: (theme: string) => void;
 }) {
 	return (
-		<Select
-			items={themeLabels}
-			defaultValue={theme}
-			onValueChange={(value) => {
-				if (value !== null) setTheme(value);
-			}}
-		>
-			<SelectTrigger className="w-[180px]">
-				<SelectValue placeholder="Theme" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectGroup>
-					{themes.map((theme) => (
-						<SelectItem key={theme} value={theme}>
-							{themeLabels[theme]}
-						</SelectItem>
-					))}
-				</SelectGroup>
-			</SelectContent>
-		</Select>
+		<Selector
+			label="theme"
+			isLabelHidden
+			options={themes.map((theme) => ({
+				value: theme,
+				label: themeLabels[theme] ?? theme,
+			}))}
+			value={theme}
+			onChange={setTheme}
+			placeholder="Theme"
+			width={180}
+		/>
 	);
 }
 

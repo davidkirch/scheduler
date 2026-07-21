@@ -1,9 +1,9 @@
+import { Button } from "@astryxdesign/core/Button";
+import { useToast } from "@astryxdesign/core/Toast";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import LoginSignUp from "@/components/logInSignUp";
 import ScheduleGrid from "@/components/schedule-grid";
-import { Button } from "@/components/ui/button";
 import UserBubble from "@/components/userBubble";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -40,6 +40,7 @@ function RouteComponent() {
 
 	const [schedule, setSchedule] = useState<Date[]>([]);
 	const [showResultsButton, setShowResultsButton] = useState(false);
+	const showToast = useToast();
 
 	// Prefill with this user's earlier vote once a session exists. A fresh guest has
 	// nothing to load, so the grid just stays empty.
@@ -51,11 +52,12 @@ function RouteComponent() {
 			})
 			.catch(() => {
 				// prefill is a convenience — an empty grid is a fine fallback
-				toast.error("could not load your previous vote", {
-					position: "top-center",
+				showToast({
+					body: "could not load your previous vote",
+					type: "error",
 				});
 			});
-	}, [user, project.token]);
+	}, [user, project.token, showToast]);
 
 	const checkResultsAvailability = useCallback(async () => {
 		try {
@@ -100,7 +102,9 @@ function RouteComponent() {
 					/>
 					<div className="flex w-full items-center justify-center p-4 gap-4">
 						<Button
+							label="save"
 							size="lg"
+							variant="primary"
 							onClick={async () => {
 								try {
 									await submitVote({
@@ -108,22 +112,19 @@ function RouteComponent() {
 									});
 								} catch (err) {
 									// silently dropping this lost the user's whole selection
-									toast.error(
-										err instanceof Error
-											? `could not save your vote: ${err.message}`
-											: "could not save your vote",
-										{ position: "top-center" },
-									);
+									showToast({
+										body:
+											err instanceof Error
+												? `could not save your vote: ${err.message}`
+												: "could not save your vote",
+										type: "error",
+									});
 									return;
 								}
-								toast.success("vote has been saved", {
-									position: "top-center",
-								});
+								showToast({ body: "vote has been saved" });
 								checkResultsAvailability();
 							}}
-						>
-							save
-						</Button>
+						/>
 						<Link
 							to="/project/$projectSlug"
 							params={{ projectSlug: project.token }}
@@ -131,9 +132,9 @@ function RouteComponent() {
 							<Button
 								className={showResultsButton !== true ? "hidden" : ""}
 								size="lg"
-							>
-								see vote results
-							</Button>
+								label="see vote results"
+								variant="primary"
+							/>
 						</Link>
 					</div>
 				</div>

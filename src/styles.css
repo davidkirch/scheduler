@@ -1,6 +1,12 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+@import "@astryxdesign/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);
 @import '@fontsource/courier-prime';
 
 @custom-variant dark (&:is(.dark *));
@@ -15,6 +21,30 @@ summary::-webkit-details-marker {
 html,
 body {
   overscroll-behavior: none;
+}
+
+/* react-schedule-selector sets touch-action: none on every cell so a touch-drag selects
+   instead of scrolling the page. The results grid isn't selectable, so give scrolling
+   back. Deliberately unlayered: styled-components injects its rule unlayered too, and
+   anything in Tailwind's @layer utilities loses to that regardless of specificity. */
+.results-grid .rgdp__grid-cell {
+  touch-action: auto;
+}
+
+/* Cell height is computed in ScheduleGrid and fed in as --cell-h so a whole day fits
+   the viewport. Same two reasons this can't be a Tailwind utility as the rule above:
+   it must stay unlayered to beat styled-components' `height: 25px`, and it needs the
+   two-class specificity to win the tie. */
+.schedule-grid .rgdp__grid-cell > * {
+  height: var(--cell-h);
+}
+
+/* The library sizes rows as `auto repeat(N, 1fr)`. In a grid with indefinite height every
+   1fr track equalises to the TALLEST row in the grid, so one tall row silently re-inflates
+   all of them and the cells float inside oversized tracks. We already know the height we
+   want, so pin the tracks instead of letting content drive them. */
+.schedule-grid :has(> .rgdp__grid-cell) {
+  grid-template-rows: auto repeat(var(--rows), var(--cell-h));
 }
 
 @theme inline {
@@ -61,17 +91,40 @@ body {
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+  --color-accent: var(--primary);
+  --color-accent-muted: var(--secondary);
+  --color-background-body: var(--surface-page);
+  --color-background-card: var(--card);
+  --color-background-muted: var(--muted);
+  --color-background-popover: var(--popover);
+  --color-background-surface: var(--background);
+  --color-border: var(--border);
+  --color-border-emphasized: var(--primary);
+  --color-icon-accent: var(--primary);
+  --color-icon-primary: var(--foreground);
+  --color-icon-secondary: var(--foreground);
+  --color-on-accent: var(--primary-foreground);
+  --color-text-accent: var(--primary);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: var(--foreground);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --radius: 0;
+  --radius-none: 0;
+  --radius-inner: 0;
+  --radius-element: 0;
+  --radius-container: 0;
+  --radius-page: 0;
+  --radius-chat: 0;
+  --radius-full: 0;
   /* Page gutter. Fluid so it gives ground as the viewport narrows. A percentage
      width can't do this: its gutter keeps its share while the content hits its
      min-width floor, so the content overflows one side instead of the gutter
@@ -96,10 +149,26 @@ body {
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
+  --color-accent: var(--primary);
+  --color-accent-muted: var(--secondary);
+  --color-background-body: var(--surface-page);
+  --color-background-card: var(--card);
+  --color-background-muted: var(--muted);
+  --color-background-popover: var(--popover);
+  --color-background-surface: var(--background);
+  --color-border: var(--border);
+  --color-border-emphasized: var(--primary);
+  --color-icon-accent: var(--primary);
+  --color-icon-primary: var(--foreground);
+  --color-icon-secondary: var(--foreground);
+  --color-on-accent: var(--primary-foreground);
+  --color-text-accent: var(--primary);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: var(--foreground);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -124,17 +193,40 @@ body {
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+  --color-accent: var(--primary);
+  --color-accent-muted: var(--secondary);
+  --color-background-body: var(--surface-page);
+  --color-background-card: var(--card);
+  --color-background-muted: var(--muted);
+  --color-background-popover: var(--popover);
+  --color-background-surface: var(--background);
+  --color-border: var(--border);
+  --color-border-emphasized: var(--primary);
+  --color-icon-accent: var(--primary);
+  --color-icon-primary: var(--foreground);
+  --color-icon-secondary: var(--foreground);
+  --color-on-accent: var(--primary-foreground);
+  --color-text-accent: var(--primary);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: var(--foreground);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --radius: 0;
+  --radius-none: 0;
+  --radius-inner: 0;
+  --radius-element: 0;
+  --radius-container: 0;
+  --radius-page: 0;
+  --radius-chat: 0;
+  --radius-full: 0;
 
   /* Same tokens, dark values. Slot hues keep their identity but drop in lightness so
      they sit on a dark page; --slot-empty follows the surface instead of white. */
@@ -142,6 +234,29 @@ body {
   --slot-free: oklch(86.935% 0.27168 145.232 / 0.78);
   --slot-busy: oklch(62.803% 0.25754 29.002);
   --slot-empty: oklch(0.256 0.043 254.1);
+}
+
+.scheduler-granularity-tabs {
+  height: 2.25rem !important;
+  gap: 0 !important;
+  padding: 0.25rem !important;
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.scheduler-granularity-tabs [data-tab-value] {
+  height: 100% !important;
+  color: var(--foreground) !important;
+  border-radius: 0 !important;
+}
+
+.scheduler-granularity-tabs [data-tab-value][aria-current="page"] {
+  background: var(--background) !important;
+}
+
+.scheduler-granularity-tabs [data-tab-value] > span:first-child,
+.scheduler-granularity-tabs [data-tab-value] > span:last-child {
+  display: none !important;
 }
 
 @layer base {

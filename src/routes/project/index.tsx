@@ -1,3 +1,14 @@
+import type { ISOTimeString } from "@astryxdesign/core";
+import { Button } from "@astryxdesign/core/Button";
+import { ContextMenu } from "@astryxdesign/core/ContextMenu";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { Divider } from "@astryxdesign/core/Divider";
+import { DropdownMenuItem } from "@astryxdesign/core/DropdownMenu";
+import { Switch } from "@astryxdesign/core/Switch";
+import { Tab, TabList } from "@astryxdesign/core/TabList";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { TimeInput } from "@astryxdesign/core/TimeInput";
+import { useToast } from "@astryxdesign/core/Toast";
 import {
 	useMutation,
 	useQueryClient,
@@ -6,31 +17,9 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Copy, Trash2, Vote } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { Calendar } from "@/components/calendar";
 import { LabelWithTip } from "@/components/labelWithTip";
 import LoginSignUp from "@/components/logInSignUp";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuSeparator,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserBubble from "@/components/userBubble";
 import type { projects } from "@/db/schema";
 import { authClient } from "@/lib/auth-client";
@@ -42,6 +31,8 @@ import {
 } from "@/server/projects";
 
 type Project = typeof projects.$inferSelect; // a row you read back
+const DEFAULT_MIN_TIME = "12:00" as ISOTimeString;
+const DEFAULT_MAX_TIME = "20:00" as ISOTimeString;
 
 export const Route = createFileRoute("/project/")({
 	ssr: false,
@@ -58,12 +49,16 @@ export const Route = createFileRoute("/project/")({
 function RouteComponent() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const showToast = useToast();
 
 	const { data: session } = authClient.useSession();
 	const { data: projects } = useSuspenseQuery(projectsQuery);
 
+	const [projectName, setProjectName] = useState("");
 	const [dates, setDates] = useState<Date[]>([]);
 	const [hourlyChunks, setHourlyChunks] = useState("60");
+	const [minTime, setMinTime] = useState<ISOTimeString>(DEFAULT_MIN_TIME);
+	const [maxTime, setMaxTime] = useState<ISOTimeString>(DEFAULT_MAX_TIME);
 	const [showResultsToGuests, setShowResultsToGuests] = useState(false);
 	const [error, setError] = useState("");
 	const [toDelete, setToDelete] = useState<Project | null>(null);
@@ -123,11 +118,10 @@ function RouteComponent() {
 					onSubmit={async (e) => {
 						setError("");
 						e.preventDefault();
-						const fd = new FormData(e.currentTarget);
 						const result = createProjectInput.safeParse({
-							name: fd.get("name"),
-							minTime: Number(String(fd.get("minTime")).split(":")[0]), // "12:00" → 12
-							maxTime: Number(String(fd.get("maxTime")).split(":")[0]),
+							name: projectName,
+							minTime: Number(minTime.split(":")[0]), // "12:00" -> 12
+							maxTime: Number(maxTime.split(":")[0]),
 							hourlyChunks: 60 / Number(hourlyChunks), // minutes → slots per hour
 							dates,
 							showResultsToGuests,
@@ -144,8 +138,11 @@ function RouteComponent() {
 					className="flex flex-col gap-4"
 				>
 					<div className="w-full">
-						<p>project name</p>
-						<Input name="name" />
+						<TextInput
+							label="project name"
+							value={projectName}
+							onChange={setProjectName}
+						/>
 					</div>
 					{/* Stacks at md. The row needs ~580px to honour min-w-70 plus the settings
 					    column, so it changes shape well before either column is squeezed. */}
@@ -170,49 +167,58 @@ function RouteComponent() {
 						    `flex-1` on the fields block push the create button to the bottom. */}
 						<div className="flex flex-1">
 							<div className="flex flex-col gap-2 w-full">
-								<div className="flex-1">
+								<div className="flex-1 flex flex-col gap-2">
 									<div>
 										<LabelWithTip
 											label="pick start time"
 											tipContent="defines the earliest time you can pick for each day."
 										/>
-										<Input
-											type="time"
-											name="minTime"
-											step="60"
-											defaultValue="12:00"
-											className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+										<TimeInput
+											label="pick start time"
+											isLabelHidden
+											value={minTime}
+											onChange={(value) =>
+												setMinTime(value ?? DEFAULT_MIN_TIME)
+											}
+											increment={1}
+											hourFormat="24h"
+											width="100%"
 										/>
 									</div>
+
 									<div>
 										<LabelWithTip
 											label="pick end time"
 											tipContent="defines the latest time you can pick for each day."
 										/>
-										<Input
-											type="time"
-											name="maxTime"
-											step="60"
-											defaultValue="20:00"
-											className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+										<TimeInput
+											label="pick end time"
+											isLabelHidden
+											value={maxTime}
+											onChange={(value) =>
+												setMaxTime(value ?? DEFAULT_MAX_TIME)
+											}
+											increment={1}
+											hourFormat="24h"
+											width="100%"
 										/>
 									</div>
-									<LabelWithTip
-										label="granularity"
-										tipContent="defines the size of time slots. if you set it to 30 mins you can select two slots for each hour."
-									/>
+
 									<div>
-										<Tabs
-											defaultValue="60"
+										<LabelWithTip
+											label="granularity"
+											tipContent="defines the size of time slots. if you set it to 30 mins you can select two slots for each hour."
+										/>
+										<TabList
 											value={hourlyChunks}
-											onValueChange={setHourlyChunks}
+											onChange={setHourlyChunks}
+											layout="fill"
+											className="scheduler-granularity-tabs w-full"
 										>
-											<TabsList className="w-full">
-												<TabsTrigger value="60">1 hour</TabsTrigger>
-												<TabsTrigger value="30">30 minutes</TabsTrigger>
-												<TabsTrigger value="15">15 minutes</TabsTrigger>
-											</TabsList>
-										</Tabs>
+											<Tab value="60" label="1 hour" />
+											<Tab value="30" label="30 minutes" />
+											<Tab value="15" label="15 minutes" />
+										</TabList>
 									</div>
 									<div>
 										<LabelWithTip
@@ -220,15 +226,16 @@ function RouteComponent() {
 											tipContent="if checked, guests can see results. if not only you are able to view results."
 										/>
 										<Switch
-											name="show-results-to-guests"
-											checked={showResultsToGuests}
-											onCheckedChange={setShowResultsToGuests}
+											label="show results to guests"
+											isLabelHidden
+											value={showResultsToGuests}
+											onChange={setShowResultsToGuests}
 										/>
 									</div>
 								</div>
 								<div>
 									<p className="text-red-600">{error}</p>
-									<Button type="submit">create</Button>
+									<Button type="submit" label="create" variant="primary" />
 								</div>
 							</div>
 						</div>
@@ -237,84 +244,89 @@ function RouteComponent() {
 				<div className="flex flex-col pt-4">
 					<h1>projects</h1>
 					{projects.map((project) => (
-						<ContextMenu key={project.token}>
-							<ContextMenuTrigger>
-								<Link
-									to="/project/$projectSlug"
-									params={{ projectSlug: project.token }}
-									preload="intent"
-								>
-									{project.name}
-								</Link>
-							</ContextMenuTrigger>
-							<ContextMenuContent>
-								<ContextMenuItem>
-									<Link
-										to="/project/$projectSlug/vote"
-										params={{ projectSlug: project.token }}
-										className="flex flex-row gap-1.5"
-									>
-										<Vote />
-										Vote
-									</Link>
-								</ContextMenuItem>
-								<ContextMenuItem
-									onClick={() => {
-										navigator.clipboard.writeText(
-											`${window.location.origin}/project/${project.token}/vote`,
-										);
-										toast.success("copied votes link", {
-											position: "top-center",
-										});
-									}}
-								>
-									<Copy />
-									copy vote link
-								</ContextMenuItem>
-								<ContextMenuSeparator />
-								<ContextMenuItem
-									variant="destructive"
-									onClick={() => {
-										setToDelete(project);
-									}}
-								>
-									<Trash2 />
-									Delete
-								</ContextMenuItem>
-							</ContextMenuContent>
+						<ContextMenu
+							key={project.token}
+							menuContent={
+								<>
+									<DropdownMenuItem
+										icon={<Vote />}
+										label="Vote"
+										onClick={() =>
+											navigate({
+												to: "/project/$projectSlug/vote",
+												params: { projectSlug: project.token },
+											})
+										}
+									/>
+									<DropdownMenuItem
+										icon={<Copy />}
+										label="copy vote link"
+										onClick={() => {
+											navigator.clipboard.writeText(
+												`${window.location.origin}/project/${project.token}/vote`,
+											);
+											showToast({ body: "copied votes link" });
+										}}
+									/>
+									<Divider />
+									<DropdownMenuItem
+										className="text-destructive"
+										icon={<Trash2 />}
+										label="Delete"
+										onClick={() => {
+											setToDelete(project);
+										}}
+									/>
+								</>
+							}
+						>
+							<Link
+								to="/project/$projectSlug"
+								params={{ projectSlug: project.token }}
+								preload="intent"
+							>
+								{project.name}
+							</Link>
 						</ContextMenu>
 					))}
 				</div>
 			</div>
 
-			<AlertDialog
-				open={toDelete !== null}
+			<Dialog
+				isOpen={toDelete !== null}
 				onOpenChange={(open) => {
 					if (open || deleting) return;
 					setToDelete(null);
 					setDeleteError("");
 				}}
+				purpose="form"
+				width={400}
 			>
-				<AlertDialogContent className="max-w-sm sm:max-w-sm">
-					<AlertDialogHeader className="flex flex-col gap-2 w-full">
-						<AlertDialogTitle>delete "{toDelete?.name}"?</AlertDialogTitle>
-						<AlertDialogDescription>
-							its votes and results go with it. this can't be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
+				<div className="flex flex-col gap-4">
+					<DialogHeader
+						title={`delete "${toDelete?.name}"?`}
+						subtitle="its votes and results go with it. this can't be undone."
+					/>
 					{deleteError && <p className="text-red-600">{deleteError}</p>}
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={deleting}>cancel</AlertDialogCancel>
-						<AlertDialogAction
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+						<Button
+							label="cancel"
+							variant="secondary"
+							isDisabled={deleting}
+							onClick={() => {
+								setToDelete(null);
+								setDeleteError("");
+							}}
+						/>
+						<Button
+							label={deleting ? "deleting..." : "delete"}
 							variant="destructive"
-							disabled={deleting}
+							isDisabled={deleting}
 							onClick={confirmDelete}
-						>
-							{deleting ? "deleting…" : "delete"}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+						/>
+					</div>
+				</div>
+			</Dialog>
 		</div>
 	) : (
 		<div className="flex flex-col items-center justify-center w-full min-h-dvh bg-surface-page">

@@ -1,3 +1,6 @@
+import { Button } from "@astryxdesign/core/Button";
+import { ToastViewport } from "@astryxdesign/core/Toast";
+import { Theme } from "@astryxdesign/core/theme";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -6,9 +9,8 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { ThemeProvider } from "next-themes";
-import { Button } from "@/components/ui/button";
-import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider, useTheme } from "next-themes";
+import { schedulerTheme } from "@/theme";
 
 import appCss from "../styles.css?url";
 
@@ -60,7 +62,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 				<h1>something went wrong</h1>
 				<p className="text-center">{error.message}</p>
 				<a href="/">
-					<Button>back to start</Button>
+					<Button label="back to start" variant="primary" />
 				</a>
 			</div>
 		),
@@ -68,7 +70,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 			<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
 				<h1>page not found</h1>
 				<a href="/">
-					<Button>back to start</Button>
+					<Button label="back to start" variant="primary" />
 				</a>
 			</div>
 		),
@@ -92,8 +94,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					disableTransitionOnChange
 					themes={["light", "dark", "peach"]}
 				>
-					{children}
-					<Toaster />
+					<AstryxThemeBridge>{children}</AstryxThemeBridge>
 				</ThemeProvider>
 				{import.meta.env.DEV && (
 					<TanStackDevtools
@@ -111,5 +112,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<Scripts />
 			</body>
 		</html>
+	);
+}
+
+function AstryxThemeBridge({ children }: { children: React.ReactNode }) {
+	const { resolvedTheme, theme } = useTheme();
+	const mode =
+		theme === "system" ? "system" : resolvedTheme === "dark" ? "dark" : "light";
+
+	return (
+		<Theme theme={schedulerTheme} mode={mode}>
+			<ToastViewport position="topEnd" maxVisible={3}>
+				{children}
+			</ToastViewport>
+		</Theme>
 	);
 }

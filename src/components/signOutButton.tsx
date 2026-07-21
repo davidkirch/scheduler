@@ -1,21 +1,15 @@
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { useToast } from "@astryxdesign/core/Toast";
 import { useState } from "react";
-import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import DeleteAccountButton from "./deleteAccountButton";
 import LoginSignUp from "./logInSignUp";
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "./ui/alert-dialog";
-import { Button } from "./ui/button";
 
 const SignOutButton = () => {
 	const { data: session } = authClient.useSession();
 	const isAnonymous = session?.user.isAnonymous === true;
+	const showToast = useToast();
 
 	const [claimOpen, setClaimOpen] = useState(false);
 
@@ -27,17 +21,18 @@ const SignOutButton = () => {
 		try {
 			await authClient.signOut();
 		} catch (err) {
-			toast.error(
-				err instanceof Error
-					? `could not sign out: ${err.message}`
-					: "could not sign out",
-				{ position: "top-center" },
-			);
+			showToast({
+				body:
+					err instanceof Error
+						? `could not sign out: ${err.message}`
+						: "could not sign out",
+				type: "error",
+			});
 		}
 	}
 	return (
 		<>
-			<Button onClick={handleSignOut}>sign out</Button>
+			<Button label="sign out" variant="primary" onClick={handleSignOut} />
 			<ClaimDialog open={claimOpen} setOpen={setClaimOpen} />
 		</>
 	);
@@ -51,28 +46,26 @@ function ClaimDialog({
 	setOpen: (state: boolean) => void;
 }) {
 	return (
-		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogContent>
-				<AlertDialogHeader className="flex flex-col gap-4 w-fit">
-					<div>
-						<AlertDialogTitle>claim your account!</AlertDialogTitle>
-						<AlertDialogDescription>
-							if you log out of an anonymous session your account will be lost.
-							claim it now!
-						</AlertDialogDescription>
-					</div>
+		<Dialog isOpen={open} onOpenChange={setOpen} purpose="form" width={400}>
+			<div className="flex flex-col gap-4">
+				<DialogHeader
+					title="claim your account!"
+					subtitle="if you log out of an anonymous session your account will be lost. claim it now!"
+					onOpenChange={setOpen}
+				/>
+				<div className="flex flex-col gap-4 w-fit">
 					<LoginSignUp offerSignUp />
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<div className="flex flex-row justify-between w-full">
-						<DeleteAccountButton withConfirmation />
-						<Button variant="outline" onClick={() => setOpen(false)}>
-							cancel
-						</Button>
-					</div>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+				</div>
+				<div className="flex flex-row justify-between w-full">
+					<DeleteAccountButton withConfirmation />
+					<Button
+						label="cancel"
+						variant="secondary"
+						onClick={() => setOpen(false)}
+					/>
+				</div>
+			</div>
+		</Dialog>
 	);
 }
 

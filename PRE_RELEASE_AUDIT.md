@@ -101,7 +101,7 @@ which caught a real gap: that form parses as a valid URL, so the scheme check al
 - **Branding is still the starter:** `package.json` name `starter-for-tanstack`, page title
   `"Appwrite + TanStack Start"`, favicon `/appwrite.svg`, unmodified README, Appwrite notes in
   `docs/`.
-- **Dead dependencies:** `@appwrite.io/pink-icons`, `shadcn`, `pg` alongside `postgres`. The
+- **Dead dependencies:** `@appwrite.io/pink-icons`, `pg` alongside `postgres`. The
   `types` script still shells out to the Appwrite CLI.
 - **Google Fonts loaded from CDN** while `@fontsource-variable/geist` sits installed and
   unused — an avoidable external dependency and a GDPR liability for an EU-facing self-hosted
