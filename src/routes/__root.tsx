@@ -1,3 +1,4 @@
+import { Heading, Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { ToastViewport } from "@astryxdesign/core/Toast";
 import { Theme } from "@astryxdesign/core/theme";
@@ -10,8 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeProvider, useTheme } from "next-themes";
-import { schedulerTheme } from "@/scheduler";
-
+import { schedulerTheme } from "@/theme.source";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -59,8 +59,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 		// the framework's default error screen
 		errorComponent: ({ error }) => (
 			<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
-				<h1>something went wrong</h1>
-				<p className="text-center">{error.message}</p>
+				<Text>something went wrong</Text>
+				<Text>{error.message}</Text>
 				<a href="/">
 					<Button label="back to start" variant="primary" />
 				</a>
@@ -68,7 +68,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 		),
 		notFoundComponent: () => (
 			<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
-				<h1>page not found</h1>
+				<Heading level={1}>page not found</Heading>
 				<a href="/">
 					<Button label="back to start" variant="primary" />
 				</a>

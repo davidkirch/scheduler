@@ -4,7 +4,6 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
-@import "./theme.css";
 @import "@astryxdesign/core/tailwind-theme.css";
 @import "tailwindcss/utilities.css" layer(utilities);
 @import '@fontsource/courier-prime';
@@ -23,29 +22,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* react-schedule-selector sets touch-action: none on every cell so a touch-drag selects
-   instead of scrolling the page. The results grid isn't selectable, so give scrolling
-   back. Deliberately unlayered: styled-components injects its rule unlayered too, and
-   anything in Tailwind's @layer utilities loses to that regardless of specificity. */
-.results-grid .rgdp__grid-cell {
-  touch-action: auto;
-}
-
-/* Cell height is computed in ScheduleGrid and fed in as --cell-h so a whole day fits
-   the viewport. Same two reasons this can't be a Tailwind utility as the rule above:
-   it must stay unlayered to beat styled-components' `height: 25px`, and it needs the
-   two-class specificity to win the tie. */
-.schedule-grid .rgdp__grid-cell > * {
-  height: var(--cell-h);
-}
-
-/* The library sizes rows as `auto repeat(N, 1fr)`. In a grid with indefinite height every
-   1fr track equalises to the TALLEST row in the grid, so one tall row silently re-inflates
-   all of them and the cells float inside oversized tracks. We already know the height we
-   want, so pin the tracks instead of letting content drive them. */
-.schedule-grid :has(> .rgdp__grid-cell) {
-  grid-template-rows: auto repeat(var(--rows), var(--cell-h));
-}
 
 @theme inline {
   --font-heading: var(--font-sans);
@@ -236,52 +212,12 @@ body {
   --slot-empty: oklch(0.256 0.043 254.1);
 }
 
-.scheduler-granularity-tabs {
-  height: 2.25rem !important;
-  gap: 0 !important;
-  padding: 0.25rem !important;
-  background: var(--muted) !important;
-  color: var(--foreground) !important;
-}
-
-.scheduler-granularity-tabs [data-tab-value] {
-  height: 100% !important;
-  color: var(--foreground) !important;
-  border-radius: 0 !important;
-}
-
-.scheduler-granularity-tabs [data-tab-value][aria-current="page"] {
-  background: var(--background) !important;
-}
-
-.scheduler-granularity-tabs [data-tab-value] > span:first-child,
-.scheduler-granularity-tabs [data-tab-value] > span:last-child {
-  display: none !important;
-}
-
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
   body {
-    /* text-foreground, not text-black — the latter stays black in dark mode. */
     @apply bg-surface-page text-foreground;
-  }
-  html {
-    @apply font-sans;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
-}
-
-h1 {
-  @apply text-4xl
-}
-h2 {
-  @apply text-3xl
-}
-h3 {
-  @apply text-2xl
 }

@@ -1,3 +1,4 @@
+import { Heading } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Divider } from "@astryxdesign/core/Divider";
@@ -49,7 +50,7 @@ const LoginSignUp = ({
 
 	const content = (
 		<div className="flex flex-col gap-4 w-full">
-			{showTitle === true && <h3>log in or sign up</h3>}
+			{showTitle === true && <Heading level={3}>log in or sign up</Heading>}
 			<div className="flex flex-col gap-2">
 				<TabList value={activeTab} onChange={setActiveTab} layout="fill">
 					{offerAnonymous && <Tab value="anonymous" label="anonymous" />}

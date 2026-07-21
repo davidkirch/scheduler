@@ -1,3 +1,4 @@
+import { Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { Popover } from "@astryxdesign/core/Popover";
 import { Selector } from "@astryxdesign/core/Selector";
@@ -54,13 +55,7 @@ const UserBubble = () => {
 					<Button
 						label={session.user.name}
 						variant="secondary"
-						className="w-fit p-1 h-fit justify-start"
-						style={{
-							backgroundColor: "var(--surface-page)",
-							border: "2px solid var(--primary)",
-							borderRadius: 0,
-							color: "var(--foreground)",
-						}}
+						className="w-fit p-2 h-fit justify-start bg-white"
 					>
 						<AvatarName name={session.user.name} />
 					</Button>
@@ -98,8 +93,8 @@ function ThemeSelect({
 function AvatarName({ name }: { name: string }) {
 	return (
 		<div className="flex flex-row gap-2 items-center">
-			<Avatar variant="beam" title={true} name={name} />
-			<p>{name}</p>
+			<Avatar variant="beam" size={30} title={true} name={name} />
+			<Text>{name}</Text>
 		</div>
 	);
 }

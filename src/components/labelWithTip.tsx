@@ -1,3 +1,4 @@
+import { Text } from "@astryxdesign/core";
 import { Tooltip } from "@astryxdesign/core/Tooltip";
 import { CircleQuestionMark } from "lucide-react";
 
@@ -12,12 +13,12 @@ export function LabelWithTip({
 }) {
 	return (
 		<div className="flex flex-row gap-1 items-center">
-			<p>{label}</p>
+			<Text>{label}</Text>
 			<Tooltip
 				content={
 					<div className="flex flex-col">
-						{tipHeading && <p className="font-bold text-lg">{tipHeading}</p>}
-						<p>{tipContent}</p>
+						{tipHeading && <Text size="lg">{tipHeading}</Text>}
+						<Text>{tipContent}</Text>
 					</div>
 				}
 			>

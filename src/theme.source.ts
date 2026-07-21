@@ -1,7 +1,39 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral";
-
 export const schedulerTheme = defineTheme({
+	name: "scheduler",
+	extends: neutralTheme,
+	tokens: {},
+	radius: { base: 0, multiplier: 1 },
+	typography: {
+		scale: { base: 16, ratio: 1.2 },
+		body: { family: "courier", fallbacks: "-apple-system, sans-serif" },
+	},
+	components: {
+		"tab-list": {
+			base: {
+				backgroundColor: "var(--color-background-muted)",
+				padding: "var(--spacing-1)",
+			},
+		},
+		tab: {
+			base: {
+				borderRadius: "0",
+				color: "var(--color-text-primary)",
+				height: "100%",
+			},
+			selected: {
+				backgroundColor: "var(--color-background-surface)",
+			},
+		},
+		"tab-indicator": {
+			base: {
+				display: "none",
+			},
+		},
+	},
+});
+/* export const schedulerTheme = defineTheme({
 	name: "scheduler",
 	extends: neutralTheme,
 	tokens: {
@@ -35,4 +67,4 @@ export const schedulerTheme = defineTheme({
 		"--radius-none": "0",
 		"--radius-page": "0",
 	},
-});
+}); */

@@ -1,4 +1,4 @@
-import type { ISOTimeString } from "@astryxdesign/core";
+import { Heading, type ISOTimeString, Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { ContextMenu } from "@astryxdesign/core/ContextMenu";
 import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
@@ -108,7 +108,7 @@ function RouteComponent() {
 				<div className="absolute left-8">
 					<UserBubble />
 				</div>
-				<h1>scheduler</h1>
+				<Heading level={1}>scheduler</Heading>
 			</div>
 
 			{/* Fluid gutter rather than a percentage width: a % gutter can't clamp, so it
@@ -138,8 +138,10 @@ function RouteComponent() {
 					className="flex flex-col gap-4"
 				>
 					<div className="w-full">
+						<Text>project name</Text>
 						<TextInput
 							label="project name"
+							isLabelHidden
 							value={projectName}
 							onChange={setProjectName}
 						/>
@@ -213,7 +215,7 @@ function RouteComponent() {
 											value={hourlyChunks}
 											onChange={setHourlyChunks}
 											layout="fill"
-											className="scheduler-granularity-tabs w-full"
+											className="w-full"
 										>
 											<Tab value="60" label="1 hour" />
 											<Tab value="30" label="30 minutes" />
@@ -242,7 +244,7 @@ function RouteComponent() {
 					</div>
 				</form>
 				<div className="flex flex-col pt-4">
-					<h1>projects</h1>
+					<Heading level={1}>projects</Heading>
 					{projects.map((project) => (
 						<ContextMenu
 							key={project.token}

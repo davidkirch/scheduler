@@ -1,3 +1,4 @@
+import { Heading, Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { useToast } from "@astryxdesign/core/Toast";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -19,11 +20,11 @@ export const Route = createFileRoute("/project/$projectSlug_/vote")({
 		getProjectForVote({ data: { token: params.projectSlug } }),
 	errorComponent: () => (
 		<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
-			<h1>this link doesn't work</h1>
-			<p className="text-center">
+			<Heading level={1}>this link doesn't work</Heading>
+			<Text>
 				the project may have been deleted, or the link was copied incorrectly.
 				ask whoever shared it for a fresh one.
-			</p>
+			</Text>
 		</div>
 	),
 	component: RouteComponent,
@@ -76,7 +77,7 @@ function RouteComponent() {
 
 	return (
 		<div className="flex flex-col items-center p-4 w-full gap-4 bg-surface-page">
-			<h1>{project.name}</h1>
+			<Heading level={1}>{project.name}</Heading>
 			{!locked && (
 				<div className="absolute left-4">
 					<UserBubble />

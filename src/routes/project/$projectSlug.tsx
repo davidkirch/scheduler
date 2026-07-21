@@ -1,3 +1,4 @@
+import { Heading } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { Switch } from "@astryxdesign/core/Switch";
@@ -117,11 +118,11 @@ function RouteComponent() {
 						className="absolute left-0"
 					/>
 				</Link>
-				<h1>{project.name}</h1>
+				<Heading level={1}>{project.name}</Heading>
 			</div>
 
 			<div className="flex flex-col w-full">
-				<h2>results</h2>
+				<Heading level={2}>results</Heading>
 				<div className="flex flex-row items-center gap-2">
 					<a href={share_link}>vote link: {share_link}</a>
 					<IconButton
