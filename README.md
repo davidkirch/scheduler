@@ -4,6 +4,8 @@ A small, self-hostable "when can everyone meet?" tool. You create a project with
 candidate dates and a daily time window, share a link, and everyone paints the slots they're
 available in. The owner watches the overlap fill in live.
 
+> Live-Demo: [https://scheduler.davidstech.de](https://scheduler.davidstech.de)
+
 ## What it does
 
 - **Create a project** — pick a name, the candidate dates, a daily time window (e.g. 08–22),
