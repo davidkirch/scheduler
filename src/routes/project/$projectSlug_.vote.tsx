@@ -1,9 +1,10 @@
+import { Heading, Text } from "@astryxdesign/core";
+import { Button } from "@astryxdesign/core/Button";
+import { useToast } from "@astryxdesign/core/Toast";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import LoginSignUp from "@/components/logInSignUp";
 import ScheduleGrid from "@/components/schedule-grid";
-import { Button } from "@/components/ui/button";
 import UserBubble from "@/components/userBubble";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -17,15 +18,13 @@ export const Route = createFileRoute("/project/$projectSlug_/vote")({
 	ssr: false,
 	loader: ({ params }) =>
 		getProjectForVote({ data: { token: params.projectSlug } }),
-	// this is the link that gets shared around, so a stale or mistyped token has to
-	// land somewhere better than the framework's fallback error screen
 	errorComponent: () => (
 		<div className="flex flex-col w-full min-h-dvh items-center justify-center p-8 gap-4 bg-surface-page">
-			<h1>this link doesn't work</h1>
-			<p className="text-center">
+			<Heading level={1}>this link doesn't work</Heading>
+			<Text>
 				the project may have been deleted, or the link was copied incorrectly.
 				ask whoever shared it for a fresh one.
-			</p>
+			</Text>
 		</div>
 	),
 	component: RouteComponent,
@@ -40,9 +39,8 @@ function RouteComponent() {
 
 	const [schedule, setSchedule] = useState<Date[]>([]);
 	const [showResultsButton, setShowResultsButton] = useState(false);
+	const showToast = useToast();
 
-	// Prefill with this user's earlier vote once a session exists. A fresh guest has
-	// nothing to load, so the grid just stays empty.
 	useEffect(() => {
 		if (!user) return;
 		getMyVote({ data: { token: project.token } })
@@ -50,12 +48,12 @@ function RouteComponent() {
 				if (vote?.slots) setSchedule(vote.slots.map((s) => new Date(s)));
 			})
 			.catch(() => {
-				// prefill is a convenience — an empty grid is a fine fallback
-				toast.error("could not load your previous vote", {
-					position: "top-center",
+				showToast({
+					body: "could not load your previous vote",
+					type: "error",
 				});
 			});
-	}, [user, project.token]);
+	}, [user, project.token, showToast]);
 
 	const checkResultsAvailability = useCallback(async () => {
 		try {
@@ -65,13 +63,10 @@ function RouteComponent() {
 				}),
 			);
 		} catch {
-			// hiding the results button is the safe fallback
 			setShowResultsButton(false);
 		}
 	}, [project.token]);
 
-	// re-runs when the user signs in on this page, which is the point at which the
-	// answer can actually change
 	useEffect(() => {
 		if (!user) {
 			setShowResultsButton(false);
@@ -82,7 +77,7 @@ function RouteComponent() {
 
 	return (
 		<div className="flex flex-col items-center p-4 w-full gap-4 bg-surface-page">
-			<h1>{project.name}</h1>
+			<Heading level={1}>{project.name}</Heading>
 			{!locked && (
 				<div className="absolute left-4">
 					<UserBubble />
@@ -93,37 +88,34 @@ function RouteComponent() {
 				<div inert={locked} className={locked ? "opacity-50" : undefined}>
 					<ScheduleGrid
 						project={project}
-						// Reserve the save button + the page's gap and bottom padding.
 						bottomAllowance={104}
 						selection={schedule}
 						onChange={setSchedule}
 					/>
 					<div className="flex w-full items-center justify-center p-4 gap-4">
 						<Button
+							label="save"
 							size="lg"
+							variant="primary"
 							onClick={async () => {
 								try {
 									await submitVote({
 										data: { token: project.token, slots: schedule },
 									});
 								} catch (err) {
-									// silently dropping this lost the user's whole selection
-									toast.error(
-										err instanceof Error
-											? `could not save your vote: ${err.message}`
-											: "could not save your vote",
-										{ position: "top-center" },
-									);
+									showToast({
+										body:
+											err instanceof Error
+												? `could not save your vote: ${err.message}`
+												: "could not save your vote",
+										type: "error",
+									});
 									return;
 								}
-								toast.success("vote has been saved", {
-									position: "top-center",
-								});
+								showToast({ body: "vote has been saved" });
 								checkResultsAvailability();
 							}}
-						>
-							save
-						</Button>
+						/>
 						<Link
 							to="/project/$projectSlug"
 							params={{ projectSlug: project.token }}
@@ -131,9 +123,9 @@ function RouteComponent() {
 							<Button
 								className={showResultsButton !== true ? "hidden" : ""}
 								size="lg"
-							>
-								see vote results
-							</Button>
+								label="see vote results"
+								variant="primary"
+							/>
 						</Link>
 					</div>
 				</div>

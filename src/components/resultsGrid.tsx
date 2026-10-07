@@ -1,3 +1,4 @@
+import { Text } from "@astryxdesign/core";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import ScheduleGrid from "@/components/schedule-grid";
@@ -22,7 +23,9 @@ export default function ResultsGrid({
 
 	if (votes.length === 0) {
 		return (
-			<p className="py-4">no votes yet — share the vote link to collect some</p>
+			<Text className="py-4">
+				no votes yet — share the vote link to collect some
+			</Text>
 		);
 	}
 
@@ -77,19 +80,27 @@ export default function ResultsGrid({
 
 				<div className="w-44 shrink-0 text-sm">
 					{hovered ? (
-						<>
-							<p className="font-bold">
+						<div className="flex flex-col gap-2">
+							<Text weight="bold">
 								{format(new Date(hovered), "EEE d MMM HH:mm")}
-							</p>
-							<p className="pt-2 text-xs">
-								free ({free.length}/{votes.length})
-							</p>
-							<p>{free.join(", ") || "nobody"}</p>
-							<p className="pt-2 text-xs">busy</p>
-							<p>{busy.join(", ") || "nobody"}</p>
-						</>
+							</Text>
+							<div>
+								<div>
+									<Text weight="semibold">
+										free ({free.length}/{votes.length})
+									</Text>
+								</div>
+								<Text>{free.join(", ") || "nobody"}</Text>
+							</div>
+							<div className="flex flex-col">
+								<Text weight="semibold">
+									busy ({busy.length}/{votes.length})
+								</Text>
+								<Text>{busy.join(", ") || "nobody"}</Text>
+							</div>
+						</div>
 					) : (
-						<p className="text-xs">hover a slot to see who's free</p>
+						<Text size="xsm">hover a slot to see who's free</Text>
 					)}
 				</div>
 			</div>

@@ -1,3 +1,8 @@
+import { Heading, Text } from "@astryxdesign/core";
+import { Button } from "@astryxdesign/core/Button";
+import { IconButton } from "@astryxdesign/core/IconButton";
+import { Switch } from "@astryxdesign/core/Switch";
+import { useToast } from "@astryxdesign/core/Toast";
 import {
 	useMutation,
 	useQueryClient,
@@ -6,11 +11,8 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowBigLeft, Clipboard, ClipboardCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { LabelWithTip } from "@/components/labelWithTip";
 import ResultsGrid from "@/components/resultsGrid";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
 	getProjectQuery,
 	updateVisibilityMutation,
@@ -31,10 +33,11 @@ export const Route = createFileRoute("/project/$projectSlug")({
 			<div className="flex flex-col w-full items-center justify-center p-8 gap-8">
 				{error.message}
 				<Link to="/project" preload="intent">
-					<Button>
-						<ArrowBigLeft />
-						<p>back to projects</p>
-					</Button>
+					<Button
+						label="back to projects"
+						variant="primary"
+						icon={<ArrowBigLeft />}
+					/>
 				</Link>
 			</div>
 		</>
@@ -48,6 +51,7 @@ function RouteComponent() {
 	const { data: results } = useSuspenseQuery(votesQuery(projectSlug));
 
 	const [updateVisibilityPending, setUpdateVisibilityPending] = useState(false);
+	const showToast = useToast();
 
 	const queryClient = useQueryClient();
 	useEffect(() => {
@@ -86,12 +90,13 @@ function RouteComponent() {
 			startTimer();
 		},
 		onError: ({ message }) =>
-			toast.error(`could not update visibility: ${message}`, {
-				position: "top-center",
+			showToast({
+				body: `could not update visibility: ${message}`,
+				type: "error",
 			}),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries(getProjectQuery(projectSlug));
-			toast.success("updated visibility", { position: "top-center" });
+			showToast({ body: "updated visibility" });
 		},
 		onSettled: () => {
 			setUpdateVisibilityPending(false);
@@ -106,20 +111,24 @@ function RouteComponent() {
 		<div className="flex flex-col w-full min-h-dvh bg-surface-page items-center p-4 gap-4">
 			<div className="relative flex w-full justify-center">
 				<Link to="/project" preload="intent">
-					<Button className="absolute left-0">
-						<ArrowBigLeft />
-						<p className="max-sm:hidden">back to projects</p>
-					</Button>
+					<Button
+						label="back to projects"
+						variant="primary"
+						icon={<ArrowBigLeft />}
+						className="absolute left-0"
+					/>
 				</Link>
-				<h1>{project.name}</h1>
+				<Heading level={1}>{project.name}</Heading>
 			</div>
 
 			<div className="flex flex-col w-full">
-				<h2>results</h2>
+				<Heading level={2}>results</Heading>
 				<div className="flex flex-row items-center gap-2">
 					<a href={share_link}>vote link: {share_link}</a>
-					<Button
+					<IconButton
+						label={copied ? "copied vote link" : "copy vote link"}
 						variant="ghost"
+						icon={copied ? <ClipboardCheck /> : <Clipboard />}
 						onClick={() => {
 							navigator.clipboard.writeText(share_link);
 							setCopied(true);
@@ -127,9 +136,7 @@ function RouteComponent() {
 								setCopied(false);
 							}, 3_000);
 						}}
-					>
-						{copied ? <ClipboardCheck /> : <Clipboard />}
-					</Button>
+					/>
 				</div>
 				<div className="flex flex-col pt-2 pb-2">
 					<LabelWithTip
@@ -138,9 +145,10 @@ function RouteComponent() {
 					/>
 					<div className="flex flex-row gap-2 items-center">
 						<Switch
-							name="show-results-to-guests"
-							checked={project.showResultsToGuests}
-							onCheckedChange={(state) => {
+							label="show results to guests"
+							isLabelHidden
+							value={project.showResultsToGuests}
+							onChange={(state) => {
 								if (state !== project.showResultsToGuests) {
 									updateVisibility.mutate({
 										token: project.token,
@@ -158,9 +166,9 @@ function RouteComponent() {
 				{results.allowed ? (
 					<ResultsGrid project={project} votes={results.votes} />
 				) : (
-					<p className="py-4">
+					<Text className="py-4">
 						the owner has kept the results to themselves — you can still vote
-					</p>
+					</Text>
 				)}
 			</div>
 		</div>

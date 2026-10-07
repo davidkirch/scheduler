@@ -1,19 +1,9 @@
+import { Button } from "@astryxdesign/core/Button";
+import { Dialog, DialogHeader } from "@astryxdesign/core/Dialog";
+import { TextInput } from "@astryxdesign/core/TextInput";
+import { useToast } from "@astryxdesign/core/Toast";
 import { useState } from "react";
-import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "./ui/alert-dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 
 const DeteleAccountButton = ({
 	withConfirmation = false,
@@ -21,6 +11,7 @@ const DeteleAccountButton = ({
 	withConfirmation?: boolean;
 }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
+	const showToast = useToast();
 
 	const { data: session } = authClient.useSession();
 	const isAnonymous = session?.user.isAnonymous === true;
@@ -35,12 +26,13 @@ const DeteleAccountButton = ({
 		} catch (err) {
 			// Never redirect on failure — that told the user their data was gone
 			// while it was still in the database.
-			toast.error(
-				err instanceof Error
-					? `could not delete account: ${err.message}`
-					: "could not delete account",
-				{ position: "top-center" },
-			);
+			showToast({
+				body:
+					err instanceof Error
+						? `could not delete account: ${err.message}`
+						: "could not delete account",
+				type: "error",
+			});
 			return;
 		}
 		setConfirmationOpen(false);
@@ -50,6 +42,7 @@ const DeteleAccountButton = ({
 	return (
 		<>
 			<Button
+				label="delete account"
 				variant="destructive"
 				onClick={() => {
 					if (withConfirmation) {
@@ -58,9 +51,7 @@ const DeteleAccountButton = ({
 						handleDelete();
 					}
 				}}
-			>
-				delete account
-			</Button>
+			/>
 			<ConfirmationDialog
 				open={confirmationOpen}
 				setOpen={setConfirmationOpen}
@@ -83,48 +74,44 @@ function ConfirmationDialog({
 }) {
 	const [typed, setTyped] = useState("");
 	return (
-		<AlertDialog
-			open={open}
+		<Dialog
+			isOpen={open}
 			onOpenChange={(next) => {
 				setOpen(next);
 				setTyped(""); // never leave a live confirmation behind for the next open
 			}}
+			purpose="form"
+			width={400}
 		>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>delete your account?</AlertDialogTitle>
-					<AlertDialogDescription>
-						this cannot be undone. your account, every project you own, and all
-						the votes people cast on them will be deleted. votes you cast on
-						other people's projects go too.
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<div className="flex flex-col gap-2 text-sm">
-					<Label>
-						type <span className="font-mono font-bold">{CONFIRM_WORD}</span> to
-						confirm
-					</Label>
-					<Input
-						value={typed}
-						onChange={(e) => setTyped(e.target.value)}
-						autoComplete="off"
+			<div className="flex flex-col gap-4">
+				<DialogHeader
+					title="delete your account?"
+					subtitle="this cannot be undone. your account, every project you own, and all the votes people cast on them will be deleted. votes you cast on other people's projects go too."
+					onOpenChange={setOpen}
+				/>
+				<TextInput
+					label={`type ${CONFIRM_WORD} to confirm`}
+					value={typed}
+					onChange={setTyped}
+				/>
+				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+					<Button
+						label="cancel"
+						variant="secondary"
+						onClick={() => setOpen(false)}
 					/>
-				</div>
-				<AlertDialogFooter>
-					<AlertDialogCancel>cancel</AlertDialogCancel>
-					<AlertDialogAction
+					<Button
+						label="delete"
 						variant="destructive"
-						disabled={typed !== CONFIRM_WORD}
+						isDisabled={typed !== CONFIRM_WORD}
 						onClick={(e) => {
 							e.preventDefault();
 							handleDelete();
 						}}
-					>
-						delete
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+					/>
+				</div>
+			</div>
+		</Dialog>
 	);
 }
 

@@ -1,3 +1,4 @@
+import { Heading } from "@astryxdesign/core";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import LoginSignUp from "@/components/logInSignUp";
@@ -19,7 +20,7 @@ function App() {
 
 	return (
 		<div className="flex flex-col p-4 bg-surface-page min-h-dvh items-center gap-20">
-			<h1>welcome to scheduler</h1>
+			<Heading level={1}>welcome to scheduler</Heading>
 			<UserBubble />
 			{session === null && (
 				<div className="w-sm">

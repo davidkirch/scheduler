@@ -123,7 +123,7 @@ export const listProjects = createServerFn({ method: "GET" }).handler(
 );
 
 export const getProject = createServerFn({ method: "GET" })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw Error("log in first");
@@ -157,7 +157,7 @@ export const projectsQuery = queryOptions({
 export const deleteProject = createServerFn({
 	method: "POST",
 })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
@@ -227,7 +227,7 @@ createProjectInput satisfies z.ZodType<
 >;
 
 export const createProject = createServerFn({ method: "POST" })
-	.inputValidator(createProjectInput)
+	.validator(createProjectInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
@@ -250,7 +250,7 @@ const updateVisibilityInput = z.object({
 });
 
 export const updateVisibility = createServerFn({ method: "POST" })
-	.inputValidator(updateVisibilityInput)
+	.validator(updateVisibilityInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
@@ -273,7 +273,7 @@ export const updateVisibilityMutation = {
 export const getVotesForProject = createServerFn({
 	method: "GET",
 })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
@@ -297,7 +297,7 @@ export const getVotesForProject = createServerFn({
 export const isAllowedToViewVotesForProject = createServerFn({
 	method: "GET",
 })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		// A logged-out visitor on the public vote page is the normal case, not an
 		// error — answer the question ("no") instead of throwing at them.
@@ -321,7 +321,7 @@ export const votesQuery = (token: string) =>
 
 // No owner check — anyone with the link may open a project to vote on it.
 export const getProjectForVote = createServerFn({ method: "GET" })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		const [project] = await db
 			.select()
@@ -339,7 +339,7 @@ export const getProjectForVoteQuery = (token: string) =>
 	});
 
 export const getMyVote = createServerFn({ method: "GET" })
-	.inputValidator(tokenInput)
+	.validator(tokenInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) return null;
@@ -367,7 +367,7 @@ export const submitVoteInput = z.object({
 });
 
 export const submitVote = createServerFn({ method: "POST" })
-	.inputValidator(submitVoteInput)
+	.validator(submitVoteInput)
 	.handler(async ({ data }) => {
 		const user = await currentUser();
 		if (!user) throw new Error("log in first");
