@@ -8,6 +8,10 @@ available in. The owner watches the overlap fill in live.
 
 <img width="2482" height="1326" alt="image" src="https://github.com/user-attachments/assets/600df786-e063-432e-a7ca-1fd9e4673cd9" />
 
+<img width="2533" height="582" alt="image" src="https://github.com/user-attachments/assets/10b8b1cf-a4d3-4bdd-b1b8-0f7dc65e638b" />
+
+<img width="2530" height="749" alt="image" src="https://github.com/user-attachments/assets/f255678a-c762-4cfb-b946-7dc7e4a1781f" />
+
 
 ## What it does
 
