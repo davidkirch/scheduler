@@ -1,301 +1,105 @@
-Welcome to your new TanStack app! 
+# scheduler
 
-# Getting Started
+A small, self-hostable "when can everyone meet?" tool. You create a project with a set of
+candidate dates and a daily time window, share a link, and everyone paints the slots they're
+available in. The owner watches the overlap fill in live.
 
-To run this application:
+## What it does
+
+- **Create a project** — pick a name, the candidate dates, a daily time window (e.g. 08–22),
+  and slot granularity (1h, 30 min or 15 min).
+- **Share a link** — each project gets a random token; the vote page lives at
+  `/project/<token>/vote`.
+- **Vote** — participants drag across a grid to mark when they're free. One vote per person per
+  project; voting again updates it, and their previous selection is pre-filled.
+- **Live results** — the owner sees a heatmap of overlapping availability that updates in real
+  time as votes come in.
+- **Guest visibility** — the owner can toggle whether voters may see the results too.
+- **Accounts** — email/password, optional GitHub login, or continue anonymously. If an
+  anonymous user later creates an account, their projects and votes move over with them.
+- **Account deletion** — deleting an account removes its projects and votes.
+
+## Stack
+
+| Layer      | Choice                                                           |
+| ---------- | ---------------------------------------------------------------- |
+| Framework  | [TanStack Start](https://tanstack.com/start) (React 19, SSR, Vite) |
+| Routing    | TanStack Router (file-based, `src/routes`)                       |
+| Data       | TanStack Query + TanStack Start server functions                 |
+| Database   | PostgreSQL via [Drizzle ORM](https://orm.drizzle.team) (`postgres` driver) |
+| Auth       | [better-auth](https://better-auth.com) (email/password, GitHub, anonymous) |
+| UI         | [Astryx](https://www.npmjs.com/package/@astryxdesign/core) components + Tailwind CSS 4 |
+| Validation | Zod                                                              |
+| Tooling    | Vitest, Biome, TypeScript                                        |
+| Deploy     | Docker (bun build stage, Node runtime)                           |
+
+## Architecture
+
+```
+browser ──► TanStack Start (single Node process)
+              ├─ routes/            SSR pages + client navigation
+              ├─ server/*.ts        server functions (RPC, Zod-validated, auth-checked)
+              ├─ routes/api/auth/$  better-auth handler
+              └─ routes/api/votes/$id/stream   SSE: live vote updates
+                        │
+                        ▼
+                    PostgreSQL ── LISTEN/NOTIFY "votes" channel
+```
+
+- **One process, no separate API.** Pages and data live in the same app. Components call
+  server functions in `src/server/` (`projects.ts`, `votes.ts`) through TanStack Query; each
+  function validates input with Zod and checks the better-auth session before touching the DB.
+- **Live updates use Postgres itself.** Submitting a vote issues `NOTIFY votes, <token>`. The
+  SSE endpoint `LISTEN`s on one shared connection and pushes an event to every subscribed
+  owner, whose client then refetches. No Redis or websocket server needed. The stream applies
+  the same permission check as the results query.
+- **Data model** (`src/db/schema.ts`): `projects` (token, owner, dates, time window, slot size,
+  guest visibility) and `votes` (project, voter, chosen slots; unique per project + voter).
+  better-auth owns its tables in `src/db/auth-schema.ts`. Both cascade on user deletion.
+- **Config fails fast.** `src/env.ts` validates environment variables at boot and exits with a
+  readable message if anything is missing or malformed.
+- **Theme.** `src/themes/theme.source.ts` is the source; `npm run theme:build` generates the
+  Astryx CSS/JS next to it. `dev` and `build` run it automatically.
+
+### Layout
+
+```
+src/
+  routes/       pages: / (login), /project (dashboard), /project/$slug (results),
+                /project/$slug/vote (voting), api/ (auth + SSE)
+  server/       server functions + tests
+  components/   schedule grid, results grid, calendar, auth UI
+  db/           Drizzle client and schema
+  lib/          auth setup, date helpers, anonymous-account linking
+  themes/       Astryx theme source and generated output
+drizzle/        SQL migrations
+```
+
+## Running it
+
+Copy `.env.example` to `.env` and fill it in:
+
+| Variable                 | Required | Notes                                         |
+| ------------------------ | -------- | --------------------------------------------- |
+| `DATABASE_URL`           | yes      | `postgres://` or `postgresql://` URL          |
+| `BETTER_AUTH_URL`        | yes      | public URL of the app                         |
+| `BETTER_AUTH_SECRET`     | yes      | ≥ 32 chars, `openssl rand -base64 32`         |
+| `GITHUB_CLIENT_ID/SECRET`| no       | set both to enable GitHub login               |
 
 ```bash
 npm install
-npm run start
+npx drizzle-kit migrate   # apply migrations
+npm run dev               # http://localhost:3000
 ```
 
-# Building For Production
+Other scripts: `npm test`, `npm run build`, `npm run check` (Biome).
 
-To build this application for production:
+### Docker
 
 ```bash
-npm run build
+docker build -t scheduler .
+docker run --env-file .env -p 3000:3000 scheduler
 ```
 
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
-
-```bash
-npm run test
-```
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-npm run lint
-npm run format
-npm run check
-```
-
-
-
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
-
-```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
-```
-
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
-
-```bash
-npm install @tanstack/store
-```
-
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
-
-export default App;
-```
-
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
-
-Let's check this out by doubling the count using derived state.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
-
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
-
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
-
-export default App;
-```
-
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
-
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+Run migrations against the database separately (`npx drizzle-kit migrate`) before starting
+the container.

@@ -23,7 +23,9 @@ export default function ResultsGrid({
 
 	if (votes.length === 0) {
 		return (
-			<p className="py-4">no votes yet — share the vote link to collect some</p>
+			<Text className="py-4">
+				no votes yet — share the vote link to collect some
+			</Text>
 		);
 	}
 

@@ -1,4 +1,4 @@
-import { Heading } from "@astryxdesign/core";
+import { Heading, Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 import { Divider } from "@astryxdesign/core/Divider";
@@ -58,9 +58,9 @@ const LoginSignUp = ({
 					{offerSignUp && <Tab value="sign up" label="sign up" />}
 				</TabList>
 				{error && (
-					<p role="alert" className="text-sm text-destructive">
+					<Text role="alert" size="sm" className="text-destructive">
 						{error}
-					</p>
+					</Text>
 				)}
 				{offerAnonymous && activeTab === "anonymous" && (
 					<form

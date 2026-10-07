@@ -43,7 +43,7 @@ const UserBubble = () => {
 								/>
 							)}
 
-							<p className="text-muted-foreground">{session?.user.email}</p>
+							<Text color="secondary">{session?.user.email}</Text>
 
 							<div className="flex flex-row justify-between items-center gap-2">
 								<SignOutButton />

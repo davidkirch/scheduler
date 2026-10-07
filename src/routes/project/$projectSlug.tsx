@@ -1,4 +1,4 @@
-import { Heading } from "@astryxdesign/core";
+import { Heading, Text } from "@astryxdesign/core";
 import { Button } from "@astryxdesign/core/Button";
 import { IconButton } from "@astryxdesign/core/IconButton";
 import { Switch } from "@astryxdesign/core/Switch";
@@ -166,9 +166,9 @@ function RouteComponent() {
 				{results.allowed ? (
 					<ResultsGrid project={project} votes={results.votes} />
 				) : (
-					<p className="py-4">
+					<Text className="py-4">
 						the owner has kept the results to themselves — you can still vote
-					</p>
+					</Text>
 				)}
 			</div>
 		</div>

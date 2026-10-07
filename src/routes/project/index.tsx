@@ -236,7 +236,7 @@ function RouteComponent() {
 									</div>
 								</div>
 								<div>
-									<p className="text-red-600">{error}</p>
+									<Text className="text-destructive">{error}</Text>
 									<Button type="submit" label="create" variant="primary" />
 								</div>
 							</div>

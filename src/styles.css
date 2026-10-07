@@ -67,22 +67,6 @@ body {
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --color-accent: var(--primary);
-  --color-accent-muted: var(--secondary);
-  --color-background-body: var(--surface-page);
-  --color-background-card: var(--card);
-  --color-background-muted: var(--muted);
-  --color-background-popover: var(--popover);
-  --color-background-surface: var(--background);
-  --color-border: var(--border);
-  --color-border-emphasized: var(--primary);
-  --color-icon-accent: var(--primary);
-  --color-icon-primary: var(--foreground);
-  --color-icon-secondary: var(--foreground);
-  --color-on-accent: var(--primary-foreground);
-  --color-text-accent: var(--primary);
-  --color-text-primary: var(--foreground);
-  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -94,13 +78,6 @@ body {
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0;
-  --radius-none: 0;
-  --radius-inner: 0;
-  --radius-element: 0;
-  --radius-container: 0;
-  --radius-page: 0;
-  --radius-chat: 0;
-  --radius-full: 0;
   /* Page gutter. Fluid so it gives ground as the viewport narrows. A percentage
      width can't do this: its gutter keeps its share while the content hits its
      min-width floor, so the content overflows one side instead of the gutter
@@ -125,22 +102,6 @@ body {
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --color-accent: var(--primary);
-  --color-accent-muted: var(--secondary);
-  --color-background-body: var(--surface-page);
-  --color-background-card: var(--card);
-  --color-background-muted: var(--muted);
-  --color-background-popover: var(--popover);
-  --color-background-surface: var(--background);
-  --color-border: var(--border);
-  --color-border-emphasized: var(--primary);
-  --color-icon-accent: var(--primary);
-  --color-icon-primary: var(--foreground);
-  --color-icon-secondary: var(--foreground);
-  --color-on-accent: var(--primary-foreground);
-  --color-text-accent: var(--primary);
-  --color-text-primary: var(--foreground);
-  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -169,22 +130,6 @@ body {
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --color-accent: var(--primary);
-  --color-accent-muted: var(--secondary);
-  --color-background-body: var(--surface-page);
-  --color-background-card: var(--card);
-  --color-background-muted: var(--muted);
-  --color-background-popover: var(--popover);
-  --color-background-surface: var(--background);
-  --color-border: var(--border);
-  --color-border-emphasized: var(--primary);
-  --color-icon-accent: var(--primary);
-  --color-icon-primary: var(--foreground);
-  --color-icon-secondary: var(--foreground);
-  --color-on-accent: var(--primary-foreground);
-  --color-text-accent: var(--primary);
-  --color-text-primary: var(--foreground);
-  --color-text-secondary: var(--foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -196,13 +141,6 @@ body {
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0;
-  --radius-none: 0;
-  --radius-inner: 0;
-  --radius-element: 0;
-  --radius-container: 0;
-  --radius-page: 0;
-  --radius-chat: 0;
-  --radius-full: 0;
 
   /* Same tokens, dark values. Slot hues keep their identity but drop in lightness so
      they sit on a dark page; --slot-empty follows the surface instead of white. */

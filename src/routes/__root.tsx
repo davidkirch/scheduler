@@ -11,7 +11,8 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeProvider, useTheme } from "next-themes";
-import { schedulerTheme } from "@/theme.source";
+import { schedulerTheme } from "@/themes/scheduler";
+import schedulerCss from "@/themes/scheduler.css?url";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -33,6 +34,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 				{
 					rel: "stylesheet",
 					href: appCss,
+				},
+				{
+					rel: "stylesheet",
+					href: schedulerCss,
 				},
 				{
 					rel: "preconnect",
@@ -80,12 +85,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
+		// suppressHydrationWarning: next-themes sets the class on <html> before React
+		// hydrates, so server and client markup differ here by design.
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
-			{/* suppressHydrationWarning: next-themes sets the class on <html> before React
-			    hydrates, so server and client markup differ here by design. */}
 			<body>
 				<ThemeProvider
 					attribute="class"
@@ -116,9 +121,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function AstryxThemeBridge({ children }: { children: React.ReactNode }) {
-	const { resolvedTheme, theme } = useTheme();
+	const { theme, resolvedTheme } = useTheme();
+
+	// theme is undefined until next-themes mounts (SSR + first client render).
+	// Falling back to "system" lets Astryx resolve via media query instead of
+	// hardcoding light and flipping after hydration.
 	const mode =
-		theme === "system" ? "system" : resolvedTheme === "dark" ? "dark" : "light";
+		theme === "light" || theme === "dark"
+			? theme
+			: theme === undefined
+				? "system"
+				: resolvedTheme === "dark"
+					? "dark"
+					: "light";
 
 	return (
 		<Theme theme={schedulerTheme} mode={mode}>

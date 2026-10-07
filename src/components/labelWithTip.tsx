@@ -17,8 +17,12 @@ export function LabelWithTip({
 			<Tooltip
 				content={
 					<div className="flex flex-col">
-						{tipHeading && <Text size="lg">{tipHeading}</Text>}
-						<Text>{tipContent}</Text>
+						{tipHeading && (
+							<Text color="inherit" size="lg">
+								{tipHeading}
+							</Text>
+						)}
+						<Text color="inherit">{tipContent}</Text>
 					</div>
 				}
 			>
