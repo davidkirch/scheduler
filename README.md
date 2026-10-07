@@ -31,7 +31,8 @@ available in. The owner watches the overlap fill in live.
 | UI         | [Astryx](https://www.npmjs.com/package/@astryxdesign/core) components + Tailwind CSS 4 |
 | Validation | Zod                                                              |
 | Tooling    | Vitest, Biome, TypeScript                                        |
-| Deploy     | Docker (bun build stage, Node runtime)                           |
+| Runtime    | Bun (install/build), Node 24 + Nitro (server)                    |
+| Deploy     | Docker Compose: app, Postgres, Caddy (Cloudflare DNS-01 TLS)     |
 
 ## Architecture
 
@@ -58,7 +59,7 @@ browser ──► TanStack Start (single Node process)
   better-auth owns its tables in `src/db/auth-schema.ts`. Both cascade on user deletion.
 - **Config fails fast.** `src/env.ts` validates environment variables at boot and exits with a
   readable message if anything is missing or malformed.
-- **Theme.** `src/themes/theme.source.ts` is the source; `npm run theme:build` generates the
+- **Theme.** `src/themes/theme.source.ts` is the source; `bun run theme:build` generates the
   Astryx CSS/JS next to it. `dev` and `build` run it automatically.
 
 ### Layout
@@ -87,19 +88,24 @@ Copy `.env.example` to `.env` and fill it in:
 | `GITHUB_CLIENT_ID/SECRET`| no       | set both to enable GitHub login               |
 
 ```bash
-npm install
-npx drizzle-kit migrate   # apply migrations
-npm run dev               # http://localhost:3000
+bun install
+bunx drizzle-kit migrate  # apply migrations
+bun run dev               # http://localhost:3000
 ```
 
-Other scripts: `npm test`, `npm run build`, `npm run check` (Biome).
+Other scripts: `bun run test`, `bun run build`, `bun run check` (Biome).
 
-### Docker
+### Deploying with Docker Compose
+
+`compose.yml` runs the whole stack: Postgres, a one-shot `migrate` job, the app, and Caddy
+(`caddybuilds/caddy-cloudflare`) which gets a certificate via Cloudflare DNS-01 and is the only
+published port (443). Fill in the "Docker compose deployment" block of `.env.example`, plus
+`BETTER_AUTH_SECRET`, then:
 
 ```bash
-docker build -t scheduler .
-docker run --env-file .env -p 3000:3000 scheduler
+docker compose up -d --build
 ```
 
-Run migrations against the database separately (`npx drizzle-kit migrate`) before starting
-the container.
+Migrations run automatically before the app starts. Caddy trusts `X-Forwarded-For` only from
+`100.64.0.0/10` (NetBird's reverse proxy) and forwards the resolved client IP, which better-auth's
+rate limiter needs. Adjust `trusted_proxies` if a different proxy sits in front.
