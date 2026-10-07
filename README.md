@@ -6,6 +6,9 @@ available in. The owner watches the overlap fill in live.
 
 > Live-Demo: [https://scheduler.davidstech.de](https://scheduler.davidstech.de)
 
+<img width="2482" height="1326" alt="image" src="https://github.com/user-attachments/assets/600df786-e063-432e-a7ca-1fd9e4673cd9" />
+
+
 ## What it does
 
 - **Create a project** — pick a name, the candidate dates, a daily time window (e.g. 08–22),
