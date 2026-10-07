@@ -1,0 +1,91 @@
+configs:
+  Caddyfile:
+    content: |
+      {
+        acme_dns cloudflare {env.CF_DNS_API_TOKEN}
+        # NetBird's reverse proxy reaches us over the tunnel (100.64.0.0/10). Trust its
+        # X-Forwarded-For, reading right-to-left so a client can't spoof its own entry.
+        servers {
+          trusted_proxies static 100.64.0.0/10
+          trusted_proxies_strict
+        }
+        # the proxy may connect by IP without SNI; still serve the right cert
+        default_sni ${DOMAIN}
+      }
+
+      ${DOMAIN} {
+        header {
+          Strict-Transport-Security "max-age=31536000"
+          X-Content-Type-Options nosniff
+          X-Frame-Options DENY
+          Referrer-Policy strict-origin-when-cross-origin
+          -Server
+        }
+        reverse_proxy app:3000 {
+          # better-auth ignores multi-hop X-Forwarded-For, which would silently turn
+          # off rate limiting. Hand it the single resolved client IP instead.
+          header_up X-Forwarded-For {client_ip}
+        }
+      }
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_DB: scheduler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: build
+    command: ["bunx", "drizzle-kit", "migrate"]
+    environment:
+      DATABASE_URL: postgresql://scheduler:${POSTGRES_PASSWORD}@db:5432/scheduler
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://scheduler:${POSTGRES_PASSWORD}@db:5432/scheduler
+      BETTER_AUTH_URL: https://${DOMAIN:?set in .env}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set in .env}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # vote slots are validated against the server's local day grid
+      TZ: Europe/Berlin
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?set in .env}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    configs:
+      - source: Caddyfile
+        target: /etc/caddy/Caddyfile
+    depends_on:
+      - app
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
